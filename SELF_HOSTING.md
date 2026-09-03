@@ -5,11 +5,8 @@ Two shapes, depending on what you need.
 ## One user, one project
 
 ```sh
-npx vorlyn@beta open ./my-project
+npx vorlyn open ./my-project
 ```
-
-> It's `@beta` (`0.1.0-beta.*`), not `@latest`, for now — pin it explicitly. `docs/RISKS.md` tracks
-> what's still open before a `1.0`/`latest` release.
 
 Building from source instead (for development, or to run a version ahead of what's published):
 

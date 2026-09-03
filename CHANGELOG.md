@@ -5,14 +5,15 @@ All notable changes to this project are documented in this file. The format is b
 
 ## A note on versioning
 
-`vorlyn` (the CLI's local, single-user path — `vorlyn open`/`vorlyn serve`) is published to npm as
-`0.1.0-beta.0` under the `beta` dist-tag. Everything else here — self-hosting a real team instance,
-extension seams, the API/MCP servers run standalone — isn't cut into a release yet; **a commit SHA
-is still the unit of consumption** for that. This file tracks notable changes since the
-repository's own history began, so there is one place to read "what changed" regardless of how you
-consume it. It will grow a plain `[0.1.0]` heading once that's a tagged, `latest` release.
+`vorlyn` — the CLI's local, single-user path (`vorlyn open`/`vorlyn serve`) — is published to npm
+as `0.1.0` under the `latest` dist-tag. Self-hosting a real team instance, the extension seams, and
+running the API/MCP servers standalone aren't npm-packaged; **a commit SHA is still the unit of
+consumption** for that half. This file tracks notable changes since the repository's own history
+began, so there is one place to read "what changed" regardless of how you consume it.
 
 ## [Unreleased]
+
+## [0.1.0] - 2026-09-03
 
 ### Added
 
@@ -69,8 +70,8 @@ humanMemberCount)`, defaulting to a no-op. The core's one billing-free way to st
 - `vorlyn open` — the zero-install path — never actually worked before this history begins: a
   PGlite socket cap and a 404 on the SPA route on a fresh clone are both fixed. (At the time this
   was fixed, nothing here was published to npm yet, so verification was via
-  `node packages/cli/dist/main.js open`, built from source. `npx vorlyn@beta open` is the real
-  command now — see `README.md`/`SELF_HOSTING.md`.)
+  `node packages/cli/dist/main.js open`, built from source. `npx vorlyn open` is the real command
+  now — see `README.md`/`SELF_HOSTING.md`.)
 - The org write lock had a gap: `uploadNewDocument` was not covered by it.
 - Three MCP tool descriptions had dropped `org_read_only` from their returned shape; restored.
 - CI had never run a single job in this repository's history: `ci.yml` used

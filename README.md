@@ -13,9 +13,9 @@
   <img alt="Self-hostable" src="https://img.shields.io/badge/self--hostable-yes-2456e6">
 </p>
 
-> Beta (`0.1.0-beta.*`) — covers the local, single-user path below. Team/self-hosting still means
-> building from source. [`docs/STATUS.md`](docs/STATUS.md) tracks exactly what exists today and
-> what is deliberately absent.
+> `0.1.0` on npm covers the local, single-user path below. Team/self-hosting still means building
+> from source. [`docs/STATUS.md`](docs/STATUS.md) tracks exactly what exists today and what is
+> deliberately absent.
 
 ## Why this exists
 
@@ -45,15 +45,12 @@ the agent reads the feedback back and revises. Repeat until it's signed off.
 ### Just you, on your laptop
 
 ```sh
-npx vorlyn@beta open ./my-project
+npx vorlyn open ./my-project
 ```
 
 Spins up an embedded Postgres (PGlite — a real Postgres wire-protocol socket server), mints you an
 admin key, opens the app in your browser, and links the folder. `vorlyn serve start` runs the same
 thing detached, so it survives closing the terminal.
-
-> It's `@beta`, not `@latest`, for now — pin it explicitly. `npx vorlyn` alone won't resolve until
-> a `latest` tag exists.
 
 <p align="center"><img src="docs/assets/review-ui.png" alt="The Vorlyn review UI: a markdown document with an inline comment and a suggested edit, Accept/Reject visible" width="720"></p>
 

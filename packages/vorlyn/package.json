@@ -1,7 +1,7 @@
 {
   "name": "vorlyn",
-  "version": "0.1.0-beta.0",
-  "description": "Agent writes markdown, a human reviews and signs off, the agent reads the feedback back over MCP. Self-hostable, Apache-2.0.",
+  "version": "0.1.0",
+  "description": "The review loop for agent-written docs. Self-hostable, Apache-2.0.",
   "license": "Apache-2.0",
   "type": "module",
   "bin": {

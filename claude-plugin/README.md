@@ -45,7 +45,7 @@ There is no per-file-save mode and there will not be one.
 The `vorlyn` CLI must be reachable on `PATH`. Easiest path — install the published package:
 
 ```bash
-npm install -g vorlyn@beta
+npm install -g vorlyn
 ```
 
 Working inside this monorepo itself (contributing to `packages/cli`, or running ahead of what's

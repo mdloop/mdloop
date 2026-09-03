@@ -14,7 +14,7 @@ body:
       label: How are you running it?
       description: See `SELF_HOSTING.md` for what each of these actually does.
       options:
-        - 'npx vorlyn@beta open (zero-install)'
+        - 'npx vorlyn open (zero-install)'
         - 'A real self-hosted instance (selfhost-main.ts / Docker)'
         - 'A dev checkout (make dev)'
         - 'Vendored into another workspace (e.g. as a git submodule)'
@@ -28,8 +28,8 @@ body:
       label: Commit or version
       description: >-
         The commit SHA you're on (`git rev-parse HEAD`) for a dev checkout, or the version
-        `npx vorlyn@beta --version` printed for the published CLI — see `CHANGELOG.md`.
-      placeholder: e.g. 34c7e17, or 0.1.0-beta.0
+        `npx vorlyn --version` printed for the published CLI — see `CHANGELOG.md`.
+      placeholder: e.g. 34c7e17, or 0.1.0
     validations:
       required: true
 
@@ -72,7 +72,7 @@ body:
       description: >-
         If you're working from a checkout, paste what `pnpm verify` reports — lint, format,
         typecheck, dependency-cruiser boundaries, and the test run with its coverage summary.
-        Not applicable if you're only running `npx vorlyn@beta open` or a self-hosted instance.
+        Not applicable if you're only running `npx vorlyn open` or a self-hosted instance.
       render: text
 
   - type: textarea

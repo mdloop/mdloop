@@ -10,7 +10,7 @@ first-class participant on both ends.
 ## Quickstart
 
 ```sh
-npx vorlyn@beta open ./my-project
+npx vorlyn open ./my-project
 ```
 
 Spins up an embedded Postgres (PGlite — a real Postgres wire-protocol socket server) entirely
@@ -18,8 +18,7 @@ inside this process, mints you an admin key, opens the app in your browser, and 
 No account, no cloud service, nothing to sign up for. `vorlyn serve start` runs the same thing
 detached, so it survives closing the terminal.
 
-> This is a beta (`0.1.0-beta.*`) covering the local, single-user path — `vorlyn open`/
-> `vorlyn serve` only. It is not yet the `latest` tag; install with the version pinned above.
+> This package covers the local, single-user path — `vorlyn open`/`vorlyn serve` only.
 
 ## What you get
 
