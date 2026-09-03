@@ -1,0 +1,19 @@
+vorlyn
+Copyright 2026 the vorlyn contributors
+
+This product includes software developed as part of the vorlyn project,
+a self-hostable, open-source core.
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may
+not use this file except in compliance with the License. A copy of the
+License is included in the LICENSE file at the root of this repository,
+and is also available at:
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+"Vorlyn" and the Vorlyn logo are trademarks of the Vorlyn project
+maintainers. The Apache License, Version 2.0 grants no rights to use these
+trademarks except as required for reasonable and customary use in
+describing the origin of this software (License §6). In particular,
+running or modifying this software does not by itself grant the right to
+call a hosted or distributed derivative "Vorlyn."

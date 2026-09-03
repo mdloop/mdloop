@@ -1,0 +1,21 @@
+{
+  "name": "@vorlyn/jobs",
+  "version": "0.0.1",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "dev": "node --watch --experimental-strip-types src/main.ts"
+  },
+  "dependencies": {
+    "@vorlyn/app": "workspace:*",
+    "@vorlyn/persistence": "workspace:*",
+    "pg": "^8.22.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.20.0"
+  }
+}

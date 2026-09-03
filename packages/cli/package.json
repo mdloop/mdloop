@@ -1,0 +1,27 @@
+{
+  "name": "@vorlyn/cli",
+  "version": "0.0.1",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "dist/main.js",
+  "types": "dist/main.d.ts",
+  "bin": {
+    "vorlyn": "dist/main.js"
+  },
+  "scripts": {
+    "dev": "node --watch --experimental-strip-types src/main.ts"
+  },
+  "dependencies": {
+    "@vorlyn/persistence": "workspace:*",
+    "@vorlyn/shared": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "chokidar": "^4.0.3",
+    "open": "^10.1.2",
+    "pg": "^8.22.0"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.20.0",
+    "zod": "^4.4.3"
+  }
+}

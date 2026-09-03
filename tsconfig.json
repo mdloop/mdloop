@@ -1,0 +1,38 @@
+{
+  "files": [],
+  "references": [
+    {
+      "path": "packages/shared"
+    },
+    {
+      "path": "packages/domain"
+    },
+    {
+      "path": "packages/app"
+    },
+    {
+      "path": "packages/persistence"
+    },
+    {
+      "path": "packages/api"
+    },
+    {
+      "path": "packages/mcp"
+    },
+    {
+      "path": "packages/jobs"
+    },
+    {
+      "path": "packages/cli"
+    },
+    {
+      "path": "packages/web"
+    },
+    {
+      "path": "test"
+    },
+    {
+      "path": "scripts/gen-docs"
+    }
+  ]
+}

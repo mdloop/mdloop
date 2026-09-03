@@ -1,0 +1,27 @@
+{
+  "name": "@vorlyn/mcp",
+  "version": "0.0.1",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "dev": "node --watch --experimental-strip-types src/main.ts"
+  },
+  "dependencies": {
+    "@vorlyn/app": "workspace:*",
+    "@vorlyn/domain": "workspace:*",
+    "@vorlyn/persistence": "workspace:*",
+    "@vorlyn/shared": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "ioredis": "^6.0.0",
+    "jose": "^6.2.3",
+    "open": "^10.1.2",
+    "pg": "^8.22.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.20.0"
+  }
+}

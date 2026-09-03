@@ -1,0 +1,41 @@
+node_modules/
+dist/
+coverage/
+.env
+.env.*
+!.env.example
+!.env.selfhost.example
+*.tsbuildinfo
+.DS_Store
+test-results/
+playwright-report/
+.vorlyn-blobs/
+docs/.vorlyn/manifest.json
+docs/.vorlyn/config.json
+
+# Root-level Vorlyn-link state (created by the vorlyn-sync skill's
+# vorlyn-link). Undecided whether this repo should track it at all — see
+# docs/.vorlyn/{manifest,config}.json above for the prior incident this
+# rhymes with. Ignored wholesale for now rather than cherry-picking config.json
+# and manifest.json back in.
+.vorlyn/
+test-results/**/*.png
+playwright-report/**/*.png
+.vscode/
+.idea/
+*.log
+
+# Claude Code local session/agent state — never distributed; see .git/info/exclude
+# for the full pattern list this narrows (that file is local-only and does not
+# ship with a clone, so a contributor using Claude Code needs this here too).
+.claude/
+
+# packages/vorlyn/ is the published npm package. build-dist.mjs mechanically
+# copies these four from repo-root sources on every build (LICENSE/NOTICE/
+# CHANGELOG.md verbatim; README.md from README.npm.md, the real source) —
+# build output, not source, same as dist/ itself. Only package.json and
+# README.npm.md are tracked.
+packages/vorlyn/README.md
+packages/vorlyn/LICENSE
+packages/vorlyn/NOTICE
+packages/vorlyn/CHANGELOG.md

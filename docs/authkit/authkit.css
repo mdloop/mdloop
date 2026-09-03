@@ -1,0 +1,55 @@
+/*
+ * Custom CSS pasted into WorkOS Dashboard → AuthKit → Branding → Custom CSS.
+ * See ../authkit-branding.md for the full branding record this belongs to —
+ * this file is the one field that doesn't fit in a table.
+ *
+ * Scope, deliberately narrow (Phase 38.A): AuthKit's custom CSS cannot
+ * change page layout, hide elements, or run JS (workos.com/docs/authkit/
+ * branding). Everything structural — logo, favicon, the four brand colors,
+ * corner radius, font, centered-vs-split layout, copy, legal links — is set
+ * through the branding editor's own fields, not here. This file is type and
+ * spacing polish only: making the parts CSS *can* reach (page/heading type,
+ * hairline colors) read as an extension of packages/web/src/styles.css
+ * rather than a generic auth form.
+ *
+ * `[data-hak-page]` is WorkOS's documented per-page selector (sign-in vs.
+ * sign-up vs. code-entry are different values); `[data-method]` targets a
+ * specific OAuth provider button. Beyond those two, WorkOS does not publish
+ * a class-name contract, so the selectors below are verify-live: open the
+ * dashboard's own preview in both light and dark, and if a selector doesn't
+ * match anything, use the browser inspector against the live page to find
+ * the real one and update this file (with a redeploy note — see the
+ * branding doc's "keeping this file honest" section).
+ */
+
+/* Page heading ("Sign in to vorlyn" / "Check your email" etc.): tracking to
+   match --font-display's usage elsewhere (login-card h1 in styles.css uses
+   letter-spacing: -0.02em at 44px) — the tightening reads right once the
+   dashboard's own Font field is set to Archivo. */
+[data-hak-page] h1,
+[data-hak-page] h2 {
+  letter-spacing: -0.01em;
+}
+
+/* Hairline input borders a touch firmer than AuthKit's default gray, closer
+   to --lane-strong (#c9c5b9 light / #403d36 dark) than a generic form gray —
+   the branding editor's color fields don't cover input borders directly. */
+[data-hak-page] input {
+  border-color: rgba(35, 33, 27, 0.22);
+}
+[data-hak-page][data-theme='dark'] input,
+[data-hak-page].dark input {
+  border-color: rgba(236, 233, 226, 0.22);
+}
+
+/* Keep the OAuth/SSO buttons in the same order the branded copy expects
+   (email first, Google second, "use your company SSO" last) — data-method
+   lets us reorder without touching page structure. Values are WorkOS's own
+   provider identifiers; confirm against the live preview if a button
+   doesn't move. */
+[data-method='GoogleOAuth'] {
+  order: 2;
+}
+[data-method='MicrosoftOAuth'] {
+  order: 3;
+}

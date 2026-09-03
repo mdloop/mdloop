@@ -1,0 +1,8 @@
+# Default reviewer for everything not covered by a more specific rule below.
+* @imjasdeepk
+
+# CONSTITUTION §1-7 and its delivery gates are the non-negotiables — any PR
+# touching these should get eyes on the ADR/sign-off implications, not just
+# the diff.
+/CONSTITUTION.md @imjasdeepk
+/docs/adr/ @imjasdeepk

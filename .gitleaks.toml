@@ -1,0 +1,18 @@
+# Gitleaks config for Vorlyn. Extends the built-in default ruleset rather than replacing it —
+# `useDefault = true` keeps every stock rule (AWS keys, Stripe keys, generic
+# high-entropy secrets, etc.) and this file only adds repo-specific tuning on
+# top.
+#
+# Verified clean against this repo's actual history before this file existed:
+# `gitleaks detect --source . -v --log-opts="--all"` (109 commits, full
+# history) reported zero findings — including `.env.example`, which documents
+# variable *names* like `WORKOS_API_KEY=sk_test_...` with literal placeholder
+# text, never a real value. No allowlist entries were needed to reach a clean
+# scan, so none are added preemptively. If a future placeholder ever does trip
+# a default rule, add a narrowly-scoped entry below — a `path` restricted to
+# the specific file plus a `regex` matching the exact placeholder string, never
+# a whole-file or whole-repo exemption.
+title = "Vorlyn gitleaks config"
+
+[extend]
+useDefault = true

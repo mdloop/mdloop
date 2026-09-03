@@ -1,0 +1,21 @@
+{
+  "name": "vorlyn-sync",
+  "description": "Closes both halves of the Vorlyn review loop for a repo's markdown specs, PRDs, plans and ADRs. The vorlyn-sync skill (plus an opt-in Stop hook and a link command) pushes artifacts into Vorlyn with a change note a human reviewer can actually read; the vorlyn-review skill pulls the resulting feedback back over the Vorlyn MCP tools — comments, suggested edits, sign-off — and turns it into a revision.",
+  "version": "0.3.0",
+  "author": {
+    "name": "Vorlyn"
+  },
+  "keywords": [
+    "vorlyn",
+    "sync",
+    "specs",
+    "markdown",
+    "review",
+    "vorlyn-review",
+    "feedback",
+    "comments",
+    "suggestions",
+    "sign-off",
+    "mcp"
+  ]
+}

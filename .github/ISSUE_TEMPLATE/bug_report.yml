@@ -1,0 +1,99 @@
+name: Bug report
+description: Something in the core is broken — the review engine, the API/MCP transports, the web UI, or the CLI.
+labels: ['bug']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Found a security vulnerability instead? Don't file it here — see
+        [`SECURITY.md`](../../SECURITY.md) for the private disclosure process.
+
+  - type: dropdown
+    id: run-mode
+    attributes:
+      label: How are you running it?
+      description: See `SELF_HOSTING.md` for what each of these actually does.
+      options:
+        - 'npx vorlyn@beta open (zero-install)'
+        - 'A real self-hosted instance (selfhost-main.ts / Docker)'
+        - 'A dev checkout (make dev)'
+        - 'Vendored into another workspace (e.g. as a git submodule)'
+        - Other (describe below)
+    validations:
+      required: true
+
+  - type: input
+    id: commit-or-version
+    attributes:
+      label: Commit or version
+      description: >-
+        The commit SHA you're on (`git rev-parse HEAD`) for a dev checkout, or the version
+        `npx vorlyn@beta --version` printed for the published CLI — see `CHANGELOG.md`.
+      placeholder: e.g. 34c7e17, or 0.1.0-beta.0
+    validations:
+      required: true
+
+  - type: input
+    id: postgres-version
+    attributes:
+      label: Postgres version
+      description: '`psql --version`, or the tag of whatever Postgres image you pointed `DATABASE_URL` at.'
+      placeholder: e.g. Postgres 18 (Homebrew)
+    validations:
+      required: true
+
+  - type: input
+    id: node-version
+    attributes:
+      label: Node version
+      description: '`node --version`. This repo requires Node ≥22 (`.nvmrc`).'
+      placeholder: e.g. v22.11.0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: fresh-db
+    attributes:
+      label: Does it reproduce against a fresh database?
+      description: >-
+        A fresh database rules out a migration/state issue and points squarely at application
+        code. If you haven't tried, say so rather than guessing.
+      options:
+        - 'Yes — reproduces on a brand-new, freshly-migrated database'
+        - 'No — only reproduces on a database with existing data/history'
+        - "Haven't tried"
+    validations:
+      required: true
+
+  - type: textarea
+    id: verify-output
+    attributes:
+      label: 'pnpm verify output (if you have a dev checkout)'
+      description: >-
+        If you're working from a checkout, paste what `pnpm verify` reports — lint, format,
+        typecheck, dependency-cruiser boundaries, and the test run with its coverage summary.
+        Not applicable if you're only running `npx vorlyn@beta open` or a self-hosted instance.
+      render: text
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: Include exact error text/stack traces, not a paraphrase.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected instead
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: The smallest sequence that reliably triggers it.
+    validations:
+      required: true

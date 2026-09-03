@@ -1,0 +1,122 @@
+name: Release
+
+# Two ways in:
+#   - push a `v*` tag (the real release path, once there's a tag to trust —
+#     the job asserts the tag matches packages/vorlyn/package.json's version
+#     before publishing anything).
+#   - workflow_dispatch (the beta path, before any git tag exists — the
+#     plan is to publish 0.1.0-beta.0/beta.1 this way, with no matching tag,
+#     since a squash later would orphan a tag pointed at a commit that no
+#     longer exists on `main`).
+#
+# Deliberately never runs from a laptop: a local `npm publish` could ship
+# whatever's in someone's working tree, and this is exactly the release
+# where "the tree matched main" needs to be a fact, not a belief.
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      dist_tag:
+        description: 'npm dist-tag to publish under'
+        required: true
+        default: 'beta'
+        type: choice
+        options:
+          - beta
+          - latest
+
+permissions:
+  contents: read
+  # For npm provenance attestation (OIDC) — a no-op cost when provenance is
+  # off (private repo, see below), the same posture codeql's job takes on
+  # its own extra permissions.
+  id-token: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    # Same real-Postgres requirement `verify`'s own job has (ADR 0005) —
+    # `pnpm verify` inside `verify:release` runs the full test suite,
+    # integration tests included.
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      valkey:
+        image: valkey/valkey:8-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "valkey-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      TEST_DATABASE_URL: postgres://postgres@localhost:5432/postgres
+      TEST_REDIS_URL: redis://localhost:6379
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          # Without this, `NODE_AUTH_TOKEN` in the publish step's env is
+          # inert — `registry-url` is what makes setup-node write the
+          # .npmrc that actually reads it. Missing this produced a real
+          # ENEEDAUTH failure on the first real publish attempt: `npm
+          # publish` built and printed the full tarball successfully, then
+          # failed at the last line with no auth configured at all.
+          registry-url: 'https://registry.npmjs.org'
+      - run: pnpm install --frozen-lockfile
+
+      # The full pre-release gate: lint/types/boundaries/audit/tests/
+      # coverage/brand/docs (pnpm verify) -> the Vite SPA build -> the
+      # esbuild bundle -> the dependency-drift + optional-only-rule check ->
+      # the real npm-pack-and-install smoke test. Nothing here is skipped or
+      # abbreviated for CI — a release that only ran a subset of this gate
+      # is exactly the "gate that measures nothing" failure mode
+      # docs/RISKS.md warns about.
+      - run: pnpm verify:release
+
+      # Tag-triggered releases only: the pushed tag is the source of truth
+      # for what version is about to ship, so it must match what's actually
+      # in the manifest — a mismatch here means either the tag or the
+      # version bump was forgotten, and publishing either would be wrong.
+      # workflow_dispatch (the beta path) has no tag to check against by
+      # design — see the trigger comment above.
+      - name: Assert tag matches packages/vorlyn/package.json version
+        if: github.event_name == 'push'
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          PKG_VERSION=$(node -p "require('./packages/vorlyn/package.json').version")
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME (version $TAG_VERSION) does not match packages/vorlyn/package.json's version ($PKG_VERSION)."
+            exit 1
+          fi
+
+      # Provenance requires a public source repository — off entirely while
+      # this repo is private (see docs/RISKS.md's publish-sequencing note),
+      # on automatically the moment it's flipped public, with no workflow
+      # change needed.
+      - name: Publish to npm
+        working-directory: packages/vorlyn
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          DIST_TAG: ${{ inputs.dist_tag || 'beta' }}
+        run: |
+          if [ "${{ !github.event.repository.private }}" = "true" ]; then
+            npm publish --tag "$DIST_TAG" --provenance
+          else
+            npm publish --tag "$DIST_TAG"
+          fi
