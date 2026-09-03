@@ -257,10 +257,12 @@ describe('serve', () => {
       // test drives to its full timeout, ~200 real reads of a file that
       // never gets written in this test (the fake `spawnSupervisor` never
       // marks anything running, so the real read would always resolve
-      // `undefined` anyway). Reproducibly added enough real time on a
-      // GitHub Actions runner to blow through this test's real-wall-clock
-      // budget at both 30s and 60s, while never reproducing locally — see
-      // `ServeDeps.readInstanceRecord`'s doc comment in serve.ts.
+      // `undefined` anyway). Before this fake was added, the real reads
+      // reproducibly blew through this test's real-wall-clock budget at
+      // both 30s and 60s on a GitHub Actions runner, never locally — see
+      // `ServeDeps.readInstanceRecord`'s doc comment in serve.ts. Even with
+      // the fake, a loaded runner has since tipped over a 30s budget once
+      // with no code change; widened to 45s for real margin.
       const { deps, killCalls } = testDeps({
         ensureDataDir: () =>
           Promise.resolve({
@@ -280,7 +282,7 @@ describe('serve', () => {
       expect(err.some((l) => l.includes('Timed out waiting'))).toBe(true);
       expect(killCalls.some((c) => c.signal === 'SIGTERM')).toBe(true);
       expect(await readInstanceRecord(dataDir)).toBeUndefined();
-    }, 30_000);
+    }, 45_000);
 
     it('the supervisor dying before it reports running fails fast, not after the full timeout', async () => {
       // Never added to `aliveSet` (unlike the default fake's spawnSupervisor

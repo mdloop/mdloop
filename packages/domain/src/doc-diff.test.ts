@@ -300,7 +300,11 @@ describe('computeDocDiff — caps (honest degradation)', () => {
     const r = computeDocDiff(before, after);
     expect(r.ok).toBe(true);
     // Every block differs → all modified/removed/added; must still be quick.
-    expect(Date.now() - started).toBeLessThan(2000);
+    // Budget is intentionally generous (real runs are well under 1s) — this
+    // guards against an accidental O(n^2)-or-worse blowup, not CI runner
+    // variance; a tighter 2000ms cap was observed tipping over to
+    // 2087-2091ms on a loaded GitHub Actions runner with no code change.
+    expect(Date.now() - started).toBeLessThan(5000);
     if (r.ok) expect(r.value.blocks.every((b) => b.type !== 'unchanged')).toBe(true);
   });
 });
