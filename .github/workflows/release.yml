@@ -134,3 +134,26 @@ jobs:
           else
             npm publish --tag "$DIST_TAG"
           fi
+
+      # Reminder only — deliberately not a job. smoke:plugin-loop needs the
+      # real `claude` CLI and genuinely (if temporarily) mutates a
+      # maintainer's own ~/.claude.json to exercise the real plugin hook;
+      # neither fits a shared GitHub-hosted runner. This just makes sure
+      # the reminder is impossible to miss on the run page, every publish.
+      - name: Remind to run the plugin-loop smoke test
+        if: success()
+        env:
+          DIST_TAG: ${{ github.event_name == 'push' && 'latest' || inputs.dist_tag || 'beta' }}
+        run: |
+          echo "::notice title=Post-publish check::Run 'pnpm smoke:plugin-loop $DIST_TAG' on your own machine to verify the real published package + the real vorlyn-sync plugin loop end-to-end."
+          {
+            echo "## Post-publish check"
+            echo ""
+            echo "Published \`vorlyn@$DIST_TAG\`. This workflow cannot verify the Claude Code plugin loop itself — that needs the real \`claude\` CLI and a maintainer's own machine, not a shared runner."
+            echo ""
+            echo "Run this now:"
+            echo ""
+            echo '```sh'
+            echo "pnpm smoke:plugin-loop $DIST_TAG"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
