@@ -113,7 +113,13 @@ jobs:
         working-directory: packages/vorlyn
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          DIST_TAG: ${{ inputs.dist_tag || 'beta' }}
+          # A tag push is always the real release path (see the trigger
+          # comment above) — `inputs.dist_tag` only exists for
+          # workflow_dispatch, so without this the `||` fallback would
+          # silently publish a tagged v0.1.0 under `beta` instead of
+          # `latest`. workflow_dispatch keeps its own chosen tag, defaulting
+          # to beta for a plain re-run with no input.
+          DIST_TAG: ${{ github.event_name == 'push' && 'latest' || inputs.dist_tag || 'beta' }}
         run: |
           if [ "${{ !github.event.repository.private }}" = "true" ]; then
             npm publish --tag "$DIST_TAG" --provenance
