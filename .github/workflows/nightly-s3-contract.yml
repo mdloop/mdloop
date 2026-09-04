@@ -68,7 +68,7 @@ jobs:
       # placeholder for the step that makes it fail instead of skip.
       - name: Configure AWS credentials (OIDC)
         if: vars.NIGHTLY_S3_CONTRACT_BUCKET != ''
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ vars.NIGHTLY_S3_CONTRACT_ROLE_ARN }}
           aws-region: ${{ vars.NIGHTLY_S3_CONTRACT_REGION }}
