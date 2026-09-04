@@ -16,6 +16,7 @@
     "build:package": "node scripts/release/build-dist.mjs",
     "check-external-deps": "node scripts/release/check-external-deps.mjs",
     "smoke:package": "node scripts/release/smoke-install.mjs",
+    "smoke:plugin-loop": "node scripts/release/smoke-published-plugin.mjs",
     "test": "vitest run --coverage",
     "test:watch": "vitest",
     "boundaries": "depcruise packages --config .dependency-cruiser.cjs",
