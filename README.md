@@ -5,7 +5,7 @@
   </picture>
 </p>
 <h1 align="center">Vorlyn</h1>
-<p align="center"><strong>The review loop for agent-written docs.</strong></p>
+<p align="center"><strong>Human-in-the-loop review for agent-written markdown.</strong></p>
 
 <p align="center">
   <img alt="License: Apache-2.0" src="https://img.shields.io/badge/license-Apache--2.0-blue">

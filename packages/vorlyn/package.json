@@ -1,7 +1,7 @@
 {
   "name": "vorlyn",
   "version": "0.1.0",
-  "description": "The review loop for agent-written docs. Self-hostable, Apache-2.0.",
+  "description": "Human-in-the-loop review for agent-written markdown. Self-hostable, Apache-2.0.",
   "license": "Apache-2.0",
   "type": "module",
   "bin": {
@@ -37,6 +37,9 @@
     "review",
     "mcp",
     "agent",
+    "coding-agent",
+    "human-in-the-loop",
+    "hitl",
     "spec",
     "self-hosted",
     "postgres",

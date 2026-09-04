@@ -1,6 +1,6 @@
 # Vorlyn
 
-The review loop for agent-written docs.
+Human-in-the-loop review for agent-written markdown.
 
 An agent is good at writing a spec, a PRD, an ADR, a runbook — markdown a human needs to read,
 mark up, and sign off on before anything downstream happens. Vorlyn is a small, purpose-built
