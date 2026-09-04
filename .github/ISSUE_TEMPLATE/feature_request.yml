@@ -1,0 +1,54 @@
+name: Feature request
+description: Propose a capability for the core review engine, transports, web UI, or CLI.
+labels: ['enhancement']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Read this before filling in the boundary question below — it's the single most common
+        reason a request gets declined here, not a formality.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: The situation you hit, not the feature you'd like. Be concrete.
+    validations:
+      required: true
+
+  - type: textarea
+    id: boundary
+    attributes:
+      label: Why does this belong in the core, not in a deployment's own layer?
+      description: >-
+        CONSTITUTION §7's open-core boundary test: "a concept the core does not need does not live
+        in the core." Billing, a cross-org operator console, cloud IaC, and a marketing site are all
+        explicitly out — not a port, not a stub, not a null object; the concept simply does not
+        appear. Check `docs/STATUS.md`'s "Deliberately absent" table first; if your request is
+        already listed there, this issue needs to argue against that decision specifically, not
+        restate the request. If your request is something every self-hoster would plausibly need
+        regardless of what they build on top, say why.
+      placeholder: >-
+        e.g. "Every self-hosted org needs this, independent of whatever layer a deployment builds
+        on top, because ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed shape (optional)
+      description: >-
+        A sketch of the interface, port, or UI — doesn't need to be a full design. If this touches
+        one of the CONSTITUTION §1–7 non-negotiables, it needs an ADR (§8.5) before it can land; say
+        so if you think it does.
+    validations:
+      required: false
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Including "do nothing" and "build it as an extension via `ServerExtension`."
+    validations:
+      required: false

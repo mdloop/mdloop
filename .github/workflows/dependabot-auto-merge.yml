@@ -1,0 +1,41 @@
+name: Dependabot auto-merge
+
+# Patch/minor Dependabot bumps merge themselves once the real gate (ci.yml's
+# required checks — verify/e2e/constitution/codeql/secret-scan) goes green;
+# a major bump still lands as an ordinary PR needing a human look. "Green
+# CI" is strong evidence for a patch/minor bump (small, usually-additive
+# change), but not sufficient alone for a major one, which a changelog might
+# flag as breaking in ways CI here doesn't exercise.
+#
+# `gh pr merge --auto` queues the merge, it doesn't force it: branch
+# protection's required status checks still have to pass first, same gate
+# every other PR goes through. This closes the loop that let six routine
+# bumps pile up unmerged after the repo was recreated (see docs/RISKS.md /
+# session history) — nothing here weakens that gate, it just stops needing
+# a human to notice and click merge for the cases that don't need judgment.
+on:
+  pull_request_target:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Read the update metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@v2
+        with:
+          github-token: '${{ secrets.GITHUB_TOKEN }}'
+
+      - name: Enable auto-merge for patch/minor bumps only
+        if: |
+          steps.metadata.outputs.update-type == 'version-update:semver-patch' ||
+          steps.metadata.outputs.update-type == 'version-update:semver-minor'
+        run: gh pr merge --auto --squash "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

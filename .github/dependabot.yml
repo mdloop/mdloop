@@ -1,0 +1,27 @@
+version: 2
+updates:
+  # pnpm workspace root — pnpm speaks the npm ecosystem for Dependabot's
+  # purposes, and Dependabot understands pnpm-lock.yaml + workspace catalogs
+  # natively. One entry covers the root and every packages/* workspace.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      # Bump workspace dependencies together rather than opening a separate
+      # PR per package — most updates here are low-risk minor/patch bumps and
+      # reviewing them as one batch is cheaper than reviewing N near-identical
+      # PRs. Security updates still open on their own, ungrouped.
+      workspace-dependencies:
+        patterns:
+          - '*'
+    open-pull-requests-limit: 10
+
+  # Keep the CI workflow's own actions (checkout, setup-node, codeql-action,
+  # gitleaks-action, ...) current — a stale pinned action version is itself a
+  # supply-chain risk this repo already takes seriously (see gitleaks/secret
+  # scanning above).
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

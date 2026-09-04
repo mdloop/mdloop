@@ -1,0 +1,83 @@
+{
+  "name": "mdloop",
+  "version": "0.1.0",
+  "description": "Human-in-the-loop review for agent-written markdown. Self-hostable, Apache-2.0.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "bin": {
+    "mdloop": "dist/cli/main.js"
+  },
+  "exports": {
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "NOTICE",
+    "CHANGELOG.md"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/imjasdeepk/mdloop.git"
+  },
+  "homepage": "https://github.com/imjasdeepk/mdloop#readme",
+  "bugs": {
+    "url": "https://github.com/imjasdeepk/mdloop/issues"
+  },
+  "keywords": [
+    "markdown",
+    "review",
+    "mcp",
+    "agent",
+    "coding-agent",
+    "human-in-the-loop",
+    "hitl",
+    "spec",
+    "self-hosted",
+    "postgres",
+    "cli"
+  ],
+  "scripts": {
+    "prepublishOnly": "node ../../scripts/release/assert-packed.mjs"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "0.5.5",
+    "@electric-sql/pglite-socket": "0.2.8",
+    "@fastify/cookie": "^11.1.1",
+    "@fastify/rate-limit": "^11.1.0",
+    "@fastify/static": "^10.1.3",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@opentelemetry/api": "^1.9.1",
+    "chokidar": "^4.0.3",
+    "diff-match-patch": "^1.0.5",
+    "fastify": "^5.12.1",
+    "mdast-util-from-markdown": "^2.0.3",
+    "mdast-util-gfm": "^3.1.0",
+    "micromark-extension-gfm": "^3.0.0",
+    "nodemailer": "^7.0.0",
+    "open": "^10.1.2",
+    "pg": "^8.22.0",
+    "zod": "^4.4.3"
+  },
+  "optionalDependencies": {
+    "@aws-sdk/client-s3": "^3.1102.0",
+    "@opentelemetry/exporter-metrics-otlp-http": "^0.220.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.220.0",
+    "@opentelemetry/resources": "^2.9.0",
+    "@opentelemetry/sdk-metrics": "^2.9.0",
+    "@opentelemetry/sdk-node": "^0.220.0",
+    "@opentelemetry/sdk-trace-node": "^2.9.0",
+    "@opentelemetry/semantic-conventions": "^1.43.0"
+  },
+  "overrides": {
+    "fast-uri": "4.1.1"
+  }
+}

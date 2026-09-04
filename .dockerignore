@@ -1,0 +1,38 @@
+# mdloop production image build context.
+# Patterns without a leading slash match at any depth, same as .gitignore —
+# this is what keeps stale local packages/*/dist and packages/*/node_modules
+# out of the build context so the `build` stage's COPY only ever sees
+# tracked source, never a developer's local build residue.
+
+# Secrets — never sent as build context, never baked into a layer.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# VCS / editor
+.git
+.gitignore
+.DS_Store
+
+# Dependencies and build output — reinstalled/rebuilt inside the image.
+node_modules
+dist
+*.tsbuildinfo
+coverage
+
+# Test / e2e artifacts and tooling not needed to build or run the services.
+test-results
+playwright-report
+e2e
+fixtures
+claude-plugin
+
+# Docs and repo-root files irrelevant to the container build.
+docs
+README.md
+CLAUDE.md
+CONSTITUTION.md
+Makefile
+.mdloop-blobs

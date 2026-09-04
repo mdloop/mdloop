@@ -1,0 +1,249 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Least-privilege default; jobs that need more (CodeQL's SARIF upload) grant
+# it themselves, at the job level, not here.
+permissions:
+  contents: read
+
+# Cancel a stale run when the same branch/PR gets a new push, so redundant
+# runs don't pile up and race each other for runner time.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    # Integration tests hit a real Postgres (createTestDb, ADR 0005) — RLS is
+    # proven against the database, never mocked. Pinned as an explicit service
+    # here (rather than relying on whatever the runner image happens to ship)
+    # so this job is reproducible on any ubuntu-latest, not just today's.
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      # ADR 0010: the rate limiter's shared-store adapter is proven against a
+      # REAL Redis-protocol server, never a mock and never LocalStack — same
+      # posture ADR 0005 set for Postgres. Three test files need it
+      # (redis-rate-limiter.test.ts, its .integration.test.ts sibling, and
+      # mcp's rate-limit-parity.feature.test.ts), and without a service here
+      # they fail with "redis must be created in the prior step".
+      #
+      # This service was missing for as long as this workflow existed. Nobody
+      # saw it because the file never parsed, so `pnpm test` never ran in CI
+      # at all (see the fetch-depth comment in secret-scan). Valkey rather
+      # than redis:* for the licence; the client speaks the same protocol.
+      valkey:
+        image: valkey/valkey:8-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "valkey-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      TEST_DATABASE_URL: postgres://postgres@localhost:5432/postgres
+      TEST_REDIS_URL: redis://localhost:6379
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # typecheck FIRST, before lint. Not cosmetic ordering: cross-package
+      # imports (@mdloop/app, @mdloop/domain, ...) resolve through each
+      # workspace package's `dist/` build output (see each package.json's
+      # "exports"), and `tsc --build` is what produces it. Type-aware ESLint
+      # rules that run before that build see every cross-package symbol as
+      # type `error` and fire @typescript-eslint/no-unsafe-* on correct code.
+      # The e2e and constitution jobs already documented and respected this;
+      # verify did not, and nobody noticed because no job in this file had
+      # ever run (see the fetch-depth comment in secret-scan).
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm format:check
+      - run: pnpm boundaries
+      # --ignore-unfixable matches the local `pnpm verify` script (package.json)
+      # — without it, CI and a clean local `pnpm verify` can disagree on a
+      # vulnerability nobody can currently fix, which is exactly the kind of
+      # divergence that erodes trust in "verify passed locally."
+      - run: pnpm audit --audit-level=high --ignore-unfixable
+      - run: pnpm test
+      - run: pnpm brand-check
+      # Generated-reference drift: docs/reference/{mcp,cli}-reference.md must
+      # match packages/mcp/src/server.ts and packages/cli/src/cli.ts. This
+      # step was missing here even though it's part of the local `pnpm
+      # verify` script CONTRIBUTING.md and docs/STATUS.md both describe as
+      # "the same gate CI runs" — see docs/RISKS.md's "a gate that measures
+      # nothing looks exactly like a gate that passes" for why that gap
+      # matters more than it looks like it should.
+      - run: pnpm docs:check
+
+  e2e:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      TEST_DATABASE_URL: postgres://postgres@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm typecheck
+      - run: pnpm exec playwright test
+
+  secret-scan:
+    # Secret scanning: catch a real key landing in a
+    # commit before it can be pushed further/merged. No Postgres, no pnpm
+    # install — gitleaks ships its own binary via the action. Runs in
+    # parallel with verify/e2e (no `needs:`), same as those two jobs are
+    # parallel to each other.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # gitleaks-action v2 scans whatever git history the checkout
+          # exposes, so a full clone is what makes the `push` scan a genuine
+          # full-history scan; on `pull_request` the action restricts itself
+          # to the PR diff regardless of depth.
+          #
+          # NOTE: this was previously an expression ending in
+          # "github.event.pull_request.commits plus one", to fetch only the
+          # PR's commits plus a merge base. That is not expressible: the
+          # GitHub Actions expression language has NO arithmetic operators, so
+          # the `+ 1` was a parse error that took the ENTIRE workflow file down
+          # with it. The symptom is uniquely unhelpful and is why it survived
+          # so long — the run shows in the UI as a red X with no jobs, zero
+          # duration and no log to open, and the workflow registers under its
+          # path rather than its `name:`, because GitHub never got far enough
+          # to read one. No job in this file had ever executed. Keep the
+          # literal.
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Only enforced for organization-owned repos (free at gitleaks.io);
+          # a no-op for a personal-account repo. Leaving the reference in so
+          # this doesn't need touching if the repo ever moves to an org.
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+
+  constitution:
+    # The direct answer to CONSTITUTION.md §8.2's per-phase gate "local
+    # security scan" — today that's a human step, easy to skip under deadline
+    # pressure. Each step below is named after, and runs, exactly one
+    # constitutional non-negotiable, so a failure here says "tenant isolation
+    # broke" or "PII leaked into logs," not "some vitest test failed."
+    #
+    # These same test files also run inside `verify`'s `pnpm test` (vitest
+    # picks up every *.test.ts under its include globs) — that's intentional,
+    # not duplication to avoid. The point of this job is visibility via a
+    # named step, not exclusive ownership of when these tests run.
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      TEST_DATABASE_URL: postgres://postgres@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Cross-package imports (@mdloop/app, @mdloop/domain, ...) resolve through
+      # each workspace package's `dist/` build output (see package.json
+      # "exports"), so the project-references build has to exist before any
+      # of the steps below can import across package boundaries — same
+      # reason `e2e` runs `pnpm typecheck` before Playwright.
+      - run: pnpm typecheck
+      - name: No PII in logs (redaction)
+        run: pnpm exec vitest run test/redaction.feature.test.ts
+      - name: Tenant isolation (RLS)
+        run: pnpm exec vitest run packages/persistence/src/tenant-isolation.feature.test.ts
+      - name: Migration shape (expand/contract, ADR 0006)
+        run: bash scripts/dev/check-migration-shape.sh
+
+  codeql:
+    # SAST — GitHub-native and free: no external service, no API key
+    # to provision, which matters since this repo has no other SAST infra.
+    #
+    # javascript-typescript is CodeQL's single unified extractor for JS/TS —
+    # it parses source directly and does not compile it, so `build-mode: none`
+    # is the correct setting (not autobuild, and not a `tsc --build` step):
+    # there is no CodeQL-relevant build for an interpreted language. `pnpm
+    # install` still runs first purely so the extractor can resolve workspace
+    # package imports and get better type information, not because CodeQL
+    # needs the project-references build to exist.
+    #
+    # Gated on the repo being public: code scanning (the SARIF upload this
+    # job depends on) requires GitHub Advanced Security on a private repo,
+    # which this repo does not have — every run failed here with "Code
+    # scanning is not enabled for this repository" for as long as this
+    # workflow has actually executed (see secret-scan's fetch-depth comment
+    # for why that was itself unnoticed for a while). Self-enables the moment
+    # the repo is flipped public; remove this `if:` once that's done and this
+    # comment stops being accurate, rather than leaving a dead conditional.
+    if: ${{ !github.event.repository.private }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      # Required so the action can read the workflow's own metadata when
+      # uploading results; a no-op cost, GitHub's own advanced-setup template
+      # includes it.
+      actions: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: github/codeql-action/init@v4
+        with:
+          languages: javascript-typescript
+          build-mode: none
+      - uses: github/codeql-action/analyze@v4

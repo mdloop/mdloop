@@ -1,0 +1,18 @@
+{
+  "$comment": "Resolution-only tsconfig for dependency-cruiser (.dependency-cruiser.cjs's tsConfig option), NOT part of the real build (tsconfig.json's project references are unaffected, still resolve every @mdloop/* package through its declared package.json main/exports into dist/, exactly as before). Without an explicit `paths` mapping here, dependency-cruiser's tsPreCompilationDeps resolution falls back to plain NodeNext package resolution the same way `tsc` does — through each package's dist/ output — and .dependency-cruiser.cjs's `exclude: { path: '/dist/' }` (there specifically to keep compiled/bundled build output like packages/web/dist/assets/*.js out of the crawl) then silently drops the entire cross-package edge, not just the excluded file. That made every one of this repo's ten cross-package layering rules (domain-imports-nothing, app-only-domain-shared, etc. — CONSTITUTION.md §3/§5) unable to see almost any cross-package import for as long as this config has existed. Mapping @mdloop/* straight to each package's src/index.ts here means dependency-cruiser resolves the *logical* source-to-source edge (packages/app/src/policy.ts -> packages/domain/src/index.ts -> ...) instead of a dist/ path, so it never hits the exclude rule in the first place — the exclude keeps doing its real job (ignoring generated build output) without collaterally blinding the boundary checker.",
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@mdloop/shared": ["packages/shared/src/index.ts"],
+      "@mdloop/domain": ["packages/domain/src/index.ts"],
+      "@mdloop/app": ["packages/app/src/index.ts"],
+      "@mdloop/persistence": ["packages/persistence/src/index.ts"],
+      "@mdloop/persistence/embedded": ["packages/persistence/src/embedded.ts"],
+      "@mdloop/api": ["packages/api/src/index.ts"],
+      "@mdloop/mcp": ["packages/mcp/src/index.ts"],
+      "@mdloop/jobs": ["packages/jobs/src/index.ts"]
+    }
+  },
+  "include": ["packages/**/*.ts", "packages/**/*.tsx"]
+}

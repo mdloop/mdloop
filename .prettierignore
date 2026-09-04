@@ -1,0 +1,21 @@
+dist/
+node_modules/
+coverage/
+pnpm-lock.yaml
+.claude/worktrees/
+LICENSE
+NOTICE
+# NOTE: a `spikes/` entry and six `website/...` entries used to sit here.
+# Neither directory exists in this repository — `website/` (the marketing and
+# docs site) belongs to the deployment, not the core (CONSTITUTION §7);
+# `spikes/` was a private-repo-only research area, never open-sourced. Every
+# one of those entries ignored a path that cannot exist. Harmless in an
+# ignore file, unlike a coverage or boundary glob, but removed on the same
+# principle: a rule that matches nothing tells the next reader something
+# false about the tree.
+
+# Generated reference docs (`pnpm gen:docs`). Excluded because prettier and the
+# generator are two writers for one file: formatting them rewrites bytes the
+# generator did not produce, so `pnpm docs:check` then reports drift forever
+# against a file nobody hand-edited. The generator's output is the contract.
+docs/reference/

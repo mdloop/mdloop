@@ -1,0 +1,16 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "mdloop",
+  "description": "Claude Code plugins for mdloop — the surface where humans read, comment on, and sign off the markdown artifacts a coding agent writes.",
+  "owner": {
+    "name": "mdloop"
+  },
+  "plugins": [
+    {
+      "name": "mdloop-sync",
+      "description": "Closes both halves of the mdloop review loop: push repo markdown into mdloop for review with a readable change note, then pull the human feedback back over MCP and turn it into a revision.",
+      "source": "./claude-plugin",
+      "category": "productivity"
+    }
+  ]
+}

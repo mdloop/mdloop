@@ -1,0 +1,48 @@
+{
+  "name": "@mdloop/persistence",
+  "version": "0.0.1",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./test-support": {
+      "types": "./dist/test-support/index.d.ts",
+      "default": "./dist/test-support/index.js"
+    },
+    "./embedded": {
+      "types": "./dist/embedded.d.ts",
+      "default": "./dist/embedded.js"
+    }
+  },
+  "sideEffects": false,
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1102.0",
+    "@aws-sdk/cloudfront-signer": "^3.1098.0",
+    "@mdloop/app": "workspace:*",
+    "@mdloop/domain": "workspace:*",
+    "@mdloop/shared": "workspace:*",
+    "@electric-sql/pglite": "0.5.5",
+    "@electric-sql/pglite-socket": "0.2.8",
+    "@opentelemetry/api": "^1.9.1",
+    "@opentelemetry/exporter-metrics-otlp-http": "^0.220.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.220.0",
+    "@opentelemetry/resources": "^2.9.0",
+    "@opentelemetry/sdk-metrics": "^2.9.0",
+    "@opentelemetry/sdk-node": "^0.220.0",
+    "@opentelemetry/sdk-trace-node": "^2.9.0",
+    "@opentelemetry/semantic-conventions": "^1.43.0",
+    "ioredis": "^6.0.0",
+    "pg": "^8.22.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.20.0",
+    "esbuild": "0.28.2"
+  }
+}

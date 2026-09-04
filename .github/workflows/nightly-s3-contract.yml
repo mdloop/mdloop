@@ -1,0 +1,85 @@
+name: Nightly S3 storage contract
+
+# Exit criterion: the same behavioral
+# contract fs-storage.test.ts always ran (round-trip, idempotent re-put,
+# reject-on-different-content, deleteDocument, Public Docs Hub keyspace
+# separation — now shared via packages/persistence/src/storage/
+# storage-contract.ts) has to go green against a REAL S3 bucket, on a
+# schedule, not just at PR time. ADR 0005 forbids LocalStack/fake-AWS —
+# either a real bucket or the suite skips, never a mock standing in for S3.
+# Scheduled (not part of ci.yml's per-PR jobs) because it needs a real
+# dev-account bucket + AWS credentials, which a PR from a fork can't have.
+on:
+  schedule:
+    # 09:00 UTC daily — arbitrary "nightly" slot, no other workflow to avoid
+    # colliding with yet.
+    - cron: '0 9 * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  # id-token: write is what lets configure-aws-credentials assume a role via
+  # OIDC — no long-lived AWS access keys stored as a GitHub secret.
+  id-token: write
+
+jobs:
+  s3-contract:
+    runs-on: ubuntu-latest
+    # Scheduled runs skip silently until NIGHTLY_S3_CONTRACT_BUCKET is
+    # configured — a public repo does not need a red X on its Actions tab
+    # every single night before anyone has provisioned the bucket. A manual
+    # `workflow_dispatch` still always runs (and still fails loud below if
+    # unconfigured): that's someone deliberately checking on this job, and
+    # the "you haven't set this up yet" diagnostic is exactly what they need
+    # to see. The fail-loud step itself is untouched — this only decides
+    # whether the job runs at all on the schedule trigger.
+    if: github.event_name == 'workflow_dispatch' || vars.NIGHTLY_S3_CONTRACT_BUCKET != ''
+    env:
+      TEST_S3_BUCKET: ${{ vars.NIGHTLY_S3_CONTRACT_BUCKET }}
+      TEST_AWS_REGION: ${{ vars.NIGHTLY_S3_CONTRACT_REGION }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Cross-package imports resolve through each workspace package's
+      # dist/ build output (same reason ci.yml's e2e/constitution jobs
+      # typecheck first) — s3-storage.test.ts imports @mdloop/app/@mdloop/shared.
+      - run: pnpm typecheck
+      # NOTE (shipped without live AWS
+      # access to verify against): this step needs two things that don't
+      # exist yet and are a deployment's own responsibility to provision, not
+      # this repo's app code —
+      # 1. An OIDC-assumable IAM role scoped to read/write only
+      #    the one nightly-contract bucket (least privilege — this job must
+      #    never be able to touch a real customer bucket), wired below as
+      #    the `role-to-assume` input once its ARN exists.
+      # 2. Repo variables `NIGHTLY_S3_CONTRACT_BUCKET` / `_REGION` pointing
+      #    at a real dev-account bucket dedicated to this job (the contract
+      #    suite writes and deletes real objects under `orgs/org-a/` and
+      #    `public/pub-1/` on every run — never point this at anything with
+      #    real tenant data).
+      # Until both exist, TEST_S3_BUCKET above is unset, so s3-storage.test.ts
+      # skips gracefully (`describe.skipIf`) rather than failing — proven
+      # locally without real AWS access; this comment is the honest
+      # placeholder for the step that makes it fail instead of skip.
+      - name: Configure AWS credentials (OIDC)
+        if: vars.NIGHTLY_S3_CONTRACT_BUCKET != ''
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.NIGHTLY_S3_CONTRACT_ROLE_ARN }}
+          aws-region: ${{ vars.NIGHTLY_S3_CONTRACT_REGION }}
+      # Deliberately fails loud instead of silently passing: this job's
+      # entire purpose is proving the contract against a real bucket, so an
+      # unconfigured `NIGHTLY_S3_CONTRACT_BUCKET` must not report green —
+      # that would look like nightly verification while actually just
+      # skipping (`describe.skipIf`) every run, forever, unnoticed.
+      - name: Refuse to silently no-op when unconfigured
+        if: vars.NIGHTLY_S3_CONTRACT_BUCKET == ''
+        run: |
+          echo "::error::TEST_S3_BUCKET is unset — set the NIGHTLY_S3_CONTRACT_BUCKET/_REGION/_ROLE_ARN repo variables once a dedicated dev-account bucket + OIDC role exist. Until then this job fails loud on purpose (manual dispatch only — the schedule trigger skips entirely while unconfigured) rather than silently skipping the one suite whose entire point is running against real S3."
+          exit 1
+      - run: pnpm exec vitest run packages/persistence/src/storage/s3-storage.test.ts

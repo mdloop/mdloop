@@ -1,0 +1,41 @@
+node_modules/
+dist/
+coverage/
+.env
+.env.*
+!.env.example
+!.env.selfhost.example
+*.tsbuildinfo
+.DS_Store
+test-results/
+playwright-report/
+.mdloop-blobs/
+docs/.mdloop/manifest.json
+docs/.mdloop/config.json
+
+# Root-level mdloop-link state (created by the mdloop-sync skill's
+# mdloop-link). Undecided whether this repo should track it at all — see
+# docs/.mdloop/{manifest,config}.json above for the prior incident this
+# rhymes with. Ignored wholesale for now rather than cherry-picking config.json
+# and manifest.json back in.
+.mdloop/
+test-results/**/*.png
+playwright-report/**/*.png
+.vscode/
+.idea/
+*.log
+
+# Claude Code local session/agent state — never distributed; see .git/info/exclude
+# for the full pattern list this narrows (that file is local-only and does not
+# ship with a clone, so a contributor using Claude Code needs this here too).
+.claude/
+
+# packages/mdloop/ is the published npm package. build-dist.mjs mechanically
+# copies these four from repo-root sources on every build (LICENSE/NOTICE/
+# CHANGELOG.md verbatim; README.md from README.npm.md, the real source) —
+# build output, not source, same as dist/ itself. Only package.json and
+# README.npm.md are tracked.
+packages/mdloop/README.md
+packages/mdloop/LICENSE
+packages/mdloop/NOTICE
+packages/mdloop/CHANGELOG.md

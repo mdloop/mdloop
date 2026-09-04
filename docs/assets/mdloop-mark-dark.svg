@@ -1,0 +1,18 @@
+<!--
+  Static copy of the mdloop logomark for the README (GitHub does not render
+  CSS custom properties, so the theme-aware component can't be embedded
+  directly). Source of truth: packages/web/src/components/mdloop-mark.tsx
+  (the ink and mdloop design tokens); token values: packages/web/src/styles.css.
+  If either changes, regenerate this file and its light-mode sibling
+  (mdloop-mark-light.svg) to match — this mark has drifted from its source
+  twice before (the favicon's ink color, the mermaid theme palette).
+  NOTE: never place two consecutive hyphen characters anywhere in this
+  comment (SVG is strict XML, unlike lenient HTML, and a comment containing
+  that sequence is invalid; that exact mistake once made this file fail to
+  render anywhere).
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40">
+  <path d="M20,7 C12.82,7 7,12.82 7,20 C7,27.18 12.82,33 20,33" stroke="#ece9e2" stroke-width="7" stroke-linecap="round" fill="none"/>
+  <path d="M20,7 C27.18,7 33,12.82 33,20 C33,27.18 27.18,33 20,33" stroke="#6690ff" stroke-width="7" stroke-linecap="round" fill="none"/>
+  <circle cx="20" cy="33" r="4.5" fill="#ece9e2"/>
+</svg>

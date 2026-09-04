@@ -1,0 +1,5106 @@
+/*
+ * mdloop visual system (docs/design-system.md).
+ * Track-and-relay vernacular: chalk ground, ink text, lane rules,
+ * one mdloop-blue action accent, amber attention signals. The document
+ * viewer is a bright serif "sheet" one step raised off a warm "desk".
+ */
+
+:root {
+  color-scheme: light dark;
+
+  /* Color tokens */
+  --chalk: #eceae3;
+  --chalk-raised: #fbfaf7;
+  --ink: #23211b;
+  --ink-soft: #6b675d;
+  --lane: #dcd9d0;
+  --lane-strong: #c9c5b9;
+  --mdloop: #2456e6;
+  --mdloop-ink: #1a41b3;
+  /* Deep enough to read as a hover/active tint against the desk (--chalk),
+     not just against the white sheet — the two are close in luminance. */
+  --mdloop-wash: #dbe4fa;
+  --on-mdloop: #ffffff;
+  --signal: #a04d08;
+  --signal-wash: #f5e8d7;
+  --resolved: #15803d;
+  --danger: #b91c1c;
+  --danger-wash: #fdecec;
+  --insert-wash: #e3f2e6;
+  /* Accepted-pending-suggestion mark/overlay only (ADR 0007 decision 6) — a
+     fourth accent distinct from --mdloop (selection/primary), --signal
+     (open/replied attention), and --resolved (done/success). */
+  --accepted-pending: #7c3a8c;
+  --accepted-pending-wash: #f2e3f5;
+
+  /* Code syntax tokens: muted, editorial — not an IDE neon set. */
+  --code-comment: #948f83;
+  --code-keyword: #2456e6;
+  --code-string: #15803d;
+  --code-number: #b45309;
+  --code-function: #1a41b3;
+  --code-attr: #6b675d;
+
+  /* Type tokens */
+  --font-display: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
+  --font-body:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  /* Reading typography for the sheet: system serif stack, zero webfont load. */
+  --font-doc: Charter, 'Iowan Old Style', 'Sitka Text', Cambria, Georgia, serif;
+
+  /* Layout tokens */
+  --rail: 3px; /* the lane rail: project color on every document row */
+  --radius: 6px;
+  --sidebar-w: 232px;
+
+  /* Spacing scale — gaps/padding across the app had drifted to ad hoc
+     pixel literals (2/3/4/6/8/10/12/14/16px used interchangeably for what
+     should read as the same rhythm). Five steps covers the actual range in
+     use; --space-2 is the default "cluster" gap (icon+label, header
+     action groups). */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+}
+
+/* Dark tokens: applied automatically by OS preference, or forced by the
+   topbar toggle via [data-theme]. [data-theme="light"] always wins so the
+   toggle can override the OS setting in either direction. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --chalk: #171614;
+    --chalk-raised: #201f1b;
+    --ink: #ece9e2;
+    --ink-soft: #9c988c;
+    --lane: #2e2c27;
+    --lane-strong: #403d36;
+    --mdloop: #6690ff;
+    --mdloop-ink: #a9c1ff;
+    --mdloop-wash: #263659;
+    --on-mdloop: #0c1220;
+    --signal: #e0a55c;
+    --signal-wash: #3a2b16;
+    --resolved: #4ade80;
+    --danger: #f87171;
+    --danger-wash: #3a1c1c;
+    --insert-wash: #163a22;
+    --accepted-pending: #c98fe0;
+    --accepted-pending-wash: #33203d;
+
+    --code-comment: #6f6b61;
+    --code-keyword: #6690ff;
+    --code-string: #4ade80;
+    --code-number: #e0a55c;
+    --code-function: #a9c1ff;
+    --code-attr: #9c988c;
+  }
+}
+
+[data-theme='dark'] {
+  --chalk: #171614;
+  --chalk-raised: #201f1b;
+  --ink: #ece9e2;
+  --ink-soft: #9c988c;
+  --lane: #2e2c27;
+  --lane-strong: #403d36;
+  --mdloop: #6690ff;
+  --mdloop-ink: #a9c1ff;
+  --mdloop-wash: #263659;
+  --on-mdloop: #0c1220;
+  --signal: #e0a55c;
+  --signal-wash: #3a2b16;
+  --resolved: #4ade80;
+  --danger: #f87171;
+  --danger-wash: #3a1c1c;
+  --insert-wash: #163a22;
+  --accepted-pending: #c98fe0;
+  --accepted-pending-wash: #33203d;
+
+  --code-comment: #6f6b61;
+  --code-keyword: #6690ff;
+  --code-string: #4ade80;
+  --code-number: #e0a55c;
+  --code-function: #a9c1ff;
+  --code-attr: #9c988c;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  background: var(--chalk);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  height: 100%;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
+/* ---------- Fields ---------- */
+
+/* Wrapped in :where() so this block has zero specificity: it is a default
+   layer, not an override. Every component rule below beats it without
+   !important. Excluded: checkboxes/radios (native chrome + `accent-color`,
+   see .doc-check), file inputs (all `hidden` triggers behind a .btn), and
+   other non-text input types — none exist today, the guard is for later. */
+:where(
+  textarea,
+  select,
+  input:not(
+    [type='checkbox'],
+    [type='radio'],
+    [type='file'],
+    [type='range'],
+    [type='color'],
+    [type='image'],
+    [type='submit'],
+    [type='reset'],
+    [type='button'],
+    [type='hidden']
+  )
+) {
+  /* `font: inherit` carries the parent's *computed* line-height (21px under
+     the 14px/1.5 body) — declaring line-height separately would recompute it
+     against 13px and shorten every field by 1.5px. Hence shorthand, then size. */
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink);
+  background: var(--chalk-raised);
+  border: 1px solid var(--lane-strong);
+  border-radius: var(--radius);
+  padding: 7px var(--space-2);
+  min-width: 0;
+}
+
+:where(input, textarea)::placeholder {
+  color: var(--ink-soft);
+  opacity: 1;
+}
+
+:where(input, select, textarea):disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* The one dense size: rail rows, filter selects, inline reply boxes. */
+.field--compact,
+.rail-search input,
+.thread-actions input,
+.thread-reply-input-row input[type='text'],
+.thread-edit-field textarea,
+.share-controls select,
+.admin-org-filter select {
+  padding: 5px var(--space-2);
+}
+
+/* Wraps a naked number input so a unit reads inline — "24 hours", not a bare
+   "24" with the unit only in aria-label/help text. Same pattern as
+   .share-days-field, generalized for reuse outside the share panel. */
+.field-row {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* Inline per-field validation message, alongside the page-top banner (not
+   instead of it). */
+.field-error {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--danger);
+}
+
+/* Generic settings-form layout row — same flex shape as .invite-form's base,
+   for forms that aren't semantically an invite (session length, retention).
+   Keep .invite-form itself reserved for the actual member-invite form. */
+.settings-form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+/* Plan-ceiling hint sitting inline after a .field-row's unit word — "Team
+   plan: up to 250". Same face as .help-text but never wraps to its own
+   block, so it reads as a parenthetical on the field's own line. */
+.field-hint {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-soft);
+  margin-left: 4px;
+}
+
+/* "Following your plan's default" / "Custom — …" line above the version-
+   retention form (org-settings.tsx). Shrinks the embedded ghost button to
+   match the surrounding 11px mono help text rather than the default .btn
+   size, which reads oversized inline in a sentence. */
+.version-retention-status {
+  margin-top: 6px;
+}
+
+.version-retention-status .btn {
+  font-size: 11px;
+  padding: 2px 6px;
+}
+
+:focus-visible {
+  outline: 2px solid var(--mdloop);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Breakpoint contract (Phase 39.A normalization): this file previously mixed
+   `max-width: 899px` and `max-width: 900px` for what was meant to be the
+   same "tablet-or-narrower" cutoff. Standardized on 899px everywhere,
+   matching `docs/design-system.md`'s "900-1079px" band language (900 itself
+   belongs to the wider band). The app's other long-standing breakpoint,
+   `max-width: 720px` (phone / single-column), is unchanged. */
+
+/* ---------- Login ---------- */
+
+.login {
+  height: 100%;
+  display: grid;
+  place-items: center;
+  /* Faint lane markings across the login screen — the one decorative moment. */
+  background:
+    repeating-linear-gradient(90deg, transparent 0 159px, var(--lane) 159px 160px), var(--chalk);
+}
+
+.login-card {
+  text-align: center;
+  padding: 48px 56px;
+  background: var(--chalk-raised);
+  border: 1px solid var(--lane);
+  border-radius: var(--radius);
+}
+
+.login-card h1 {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 44px;
+  letter-spacing: -0.02em;
+  margin: 0 0 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.login-tagline {
+  color: var(--ink-soft);
+  margin: 0 0 28px;
+}
+
+/* ---------- Buttons ---------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  border-radius: var(--radius);
+  border: 1px solid var(--lane-strong);
+  background: var(--chalk-raised);
+  color: var(--ink);
+  padding: 7px 14px;
+  font-weight: 500;
+}
+
+.btn:hover {
+  border-color: var(--ink-soft);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn:disabled:hover {
+  border-color: var(--lane-strong);
+}
+
+.btn-primary {
+  background: var(--mdloop);
+  border-color: var(--mdloop);
+  color: var(--on-mdloop);
+}
+
+.btn-primary:hover {
+  background: var(--mdloop-ink);
+  border-color: var(--mdloop-ink);
+}
+
+.btn-primary:disabled:hover {
+  background: var(--mdloop);
+  border-color: var(--mdloop);
+}
+
+.btn-danger {
+  color: var(--danger);
+}
+
+.btn-danger:hover {
+  background: var(--danger-wash);
+  border-color: var(--danger);
+}
+
+.btn-ghost {
+  border-color: transparent;
+  background: transparent;
+  color: var(--ink-soft);
+  padding: 5px 8px;
+}
+
+.btn-ghost:hover {
+  color: var(--ink);
+  background: var(--mdloop-wash);
+}
+
+.btn-icon {
+  padding: 7px;
+  gap: 0;
+}
+
+.btn-ghost.btn-icon {
+  padding: 5px;
+}
+
+.btn-icon--confirm:hover:not(:disabled) {
+  color: var(--resolved);
+  background: var(--insert-wash);
+}
+
+.btn-icon--cancel:hover {
+  color: var(--danger);
+  background: var(--danger-wash);
+}
+
+/* ---------- Shell ---------- */
+
+/* AppHeader spans the full width, top to bottom of the page; the lane
+   sidebar sits below it (not beside it for the header's own height) so
+   the header reads as one continuous bar the same way it does on every
+   other page. */
+.shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.shell-body {
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--sidebar-w) 1fr;
+  flex: 1;
+  min-height: 0;
+}
+
+.sidebar {
+  border-right: 1px solid var(--lane);
+  padding: 20px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+}
+
+.sidebar-heading {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--ink-soft);
+  padding: 14px 10px 4px;
+}
+
+.lane-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: none;
+  border-radius: var(--radius);
+  padding: 7px 10px;
+  color: var(--ink);
+}
+
+/* Wraps a project's .lane-link plus its kebab menu — same reveal-on-hover
+   recipe as .doc-actions, scoped to the sidebar row instead of a doc row. */
+.lane-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.lane-row .lane-link {
+  flex: 1;
+  min-width: 0;
+}
+
+.lane-actions {
+  position: relative;
+  flex: none;
+  opacity: 0;
+  transition: opacity 120ms;
+}
+
+.lane-row:hover .lane-actions,
+.lane-row:focus-within .lane-actions {
+  opacity: 1;
+}
+
+@media (pointer: coarse) {
+  .lane-actions {
+    opacity: 1;
+  }
+}
+
+.lane-link:hover {
+  background: var(--mdloop-wash);
+}
+
+.lane-link[aria-current='true'] {
+  background: var(--mdloop-wash);
+  color: var(--mdloop-ink);
+  font-weight: 600;
+}
+
+.lane-chip {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex: none;
+}
+
+.lane-count {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-soft);
+}
+
+.lane-signal {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--signal);
+  background: var(--signal-wash);
+  border-radius: 10px;
+  padding: 0 7px;
+}
+
+/* ---------- Main column ---------- */
+
+.main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.document-header-left h2,
+.page-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: -0.01em;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* One header, shared by every authenticated app page (home, viewer, org
+   settings) instead of each building its own — see app-header.tsx. Logo,
+   search, sign-out, and theme toggle are always in the same place; only
+   .app-header-page-slot's content (lane title, doc title, mode toggle, ...)
+   changes per page. */
+.app-header {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 16px;
+  padding: 9px 28px;
+  border-bottom: 1px solid var(--lane);
+}
+
+/* Everything left of search (lane trigger, logo, page-slot) — grouped so it
+   can occupy the grid's first `1fr` track as one unit, leaving the middle
+   `auto` track free for `.app-header-search` to sit truly centered instead
+   of drifting with sibling widths. */
+.app-header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+
+/* Mobile lane-drawer trigger (Phase 39.F) — hidden by default; the one
+   caller that passes `onOpenLaneMenu` (Shell) only ever needs it visible
+   below 720px, where the sidebar itself becomes the drawer this opens. */
+.app-header-lane-trigger {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  padding: 6px;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+/* Found by the Phase 39.F responsive audit, not designed in from the start:
+   at <=720px, `.app-header-page-slot`'s `flex-shrink: 0` (needed at desktop
+   width so a short title never gets crushed) combined with
+   `.app-header-search`'s 180px `min-width` genuinely doesn't fit a phone
+   viewport — every child demanding its natural width overflows the header,
+   and depending on exact content the identity menu button can end up
+   visually unclickable, covered by an overflowing sibling's layout box
+   (real bug, caught by a live iPhone-width Playwright run, not theoretical).
+   Below 720px: the page-slot becomes genuinely shrinkable so
+   `.page-title-text`'s existing `text-overflow: ellipsis` can do its job,
+   and search collapses out of the header entirely — there is no mobile
+   affordance to reach it this pass (Cmd+K is desktop-only anyway); revisit
+   if that becomes a real gap, tracked as a known follow-up, not silently
+   dropped. */
+@media (max-width: 720px) {
+  /* The desktop grid (1fr auto 1fr) reserves a full third of the header for
+     the identity column even here, where `.app-header-search`'s track
+     collapses to nothing — that squeezes `.app-header-left` into half the
+     header and its content (title + Upload button) overflows, painting
+     underneath the identity avatar (later in DOM, later in paint order).
+     Below 720px there's no search track to center around anyway, so drop
+     back to the pre-centering flex row: `.app-header-left` takes whatever
+     `.app-header-sticky` doesn't need, same as every other responsive
+     surface in this file. */
+  .app-header {
+    display: flex;
+    gap: 8px;
+    padding: 9px 12px;
+  }
+
+  .app-header-left {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .app-header-page-slot {
+    flex: 1 1 0%;
+    min-width: 0;
+  }
+
+  .app-header-search {
+    display: none;
+  }
+
+  /* Both already carry an explicit `aria-label`/`title` independent of this
+     text, so hiding it costs no accessible name — see brand-mark.tsx and
+     the `aria-label` added to theme-toggle.tsx alongside this fix. */
+  .brand-mark-word,
+  .theme-toggle-label {
+    display: none;
+  }
+}
+
+.app-header-lane-trigger:hover {
+  background: var(--lane);
+}
+
+.app-header-search {
+  position: relative;
+  justify-self: center;
+  width: 100%;
+  min-width: 180px;
+  max-width: 340px;
+}
+
+.app-header-search .topbar-search {
+  width: 100%;
+  margin: 0;
+  padding-right: 34px;
+}
+
+/* "⌘K" hint — hidden once there's a query so it never collides with typed
+   text. Focus-and-type is the whole point; the hint just gets out of the way. */
+.app-header-search-kbd {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  padding: 1px 5px;
+  border: 1px solid var(--lane-strong);
+  border-radius: 4px;
+  background: var(--chalk-raised);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-soft);
+  pointer-events: none;
+}
+
+.app-header-search-results {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  max-height: 360px;
+  overflow-y: auto;
+  background: var(--chalk-raised);
+  border: 1px solid var(--lane);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
+  z-index: 50;
+}
+
+.app-header-search-hit {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: none;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.app-header-search-hit:hover,
+.app-header-search-hit--active {
+  background: var(--mdloop-wash);
+  color: var(--mdloop-ink);
+}
+
+.app-header-search-hit-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.app-header-search-hit-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-header-search-hit-path {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-soft);
+}
+
+.app-header-search-hit-project {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-soft);
+}
+
+.app-header-search-hit-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.app-header-search-empty {
+  padding: 10px 12px;
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+.app-header-page-slot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+/* Scoped to this slot only — the shared `.page-title` selector (also used
+   by the viewer's document header) stays untouched. Lets a long project
+   name truncate instead of crushing search/identity out of the header. */
+.app-header-page-slot .page-title {
+  min-width: 0;
+}
+
+.page-title-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-header-sticky {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+/* ---------- Identity menu ---------- */
+
+.app-header-identity {
+  position: relative;
+  display: flex;
+}
+
+/* Same size/shape as .thread-avatar, but a real button — Me carries no
+   displayName/email (see app-header.tsx), so this is a generic mark rather
+   than an initials disc. */
+.app-header-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: var(--mdloop-wash);
+  color: var(--mdloop-ink);
+  cursor: pointer;
+}
+
+.app-header-avatar:hover,
+.app-header-avatar[aria-expanded='true'] {
+  border-color: var(--lane-strong);
+}
+
+.app-header-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 180px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 4px;
+  background: var(--chalk-raised);
+  border: 1px solid var(--lane);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
+  z-index: 50;
+}
+
+.app-header-menu-meta {
+  padding: 6px 10px 8px;
+  margin-bottom: 2px;
+  border-bottom: 1px solid var(--lane);
+  text-transform: capitalize;
+}
+
+.app-header-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  padding: 7px 10px;
+  font-size: 13px;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.app-header-menu-item:hover {
+  background: var(--mdloop-wash);
+  color: var(--mdloop-ink);
+}
+
+.content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 28px 60px;
+  position: relative;
+}
+
+/* Wide enough for two row columns side by side; still capped so a short
+   list doesn't stretch edge-to-edge on very wide viewports. */
+.content-inner {
+  max-width: 1160px;
+}
+
+/* ---------- Document rows ---------- */
+
+/* Rows flow into a second column when there's room for two ≥420px tracks
+   (auto-fill collapses back to one column below that) — the empty right
+   half of a wide viewport carries rows instead of air. Reading order goes
+   left-right per grid row; group headers span the full width. */
+.doc-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  /* min(420px, 100%) keeps the single column from forcing sideways scroll
+     on viewports narrower than the track minimum. */
+  grid-template-columns: repeat(auto-fill, minmax(min(420px, 100%), 1fr));
+  gap: 8px;
+}
+
+.doc-group-header {
+  grid-column: 1 / -1;
+}
+
+.doc-list-head {
+  display: flex;
+  align-items: center;
+  padding: 0 16px 4px;
+}
+
+.doc-list-head-label {
+  border: 0;
+  background: none;
+  padding: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+
+.doc-list-head-label:hover {
+  color: var(--ink);
+}
+
+/* All-lane project grouping — a non-interactive divider row, .sidebar-heading's
+   mono/uppercase recipe but laid out inline instead of stacked. */
+.doc-group-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px 2px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-soft);
+}
+
+.doc-group-count {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-soft);
+}
+
+/* Project group headers are clickable (fast path into the tree view) —
+   Unfiled stays inert chrome since there's nothing to navigate to. Resets
+   button chrome so it reads identically to the plain-text label beside it. */
+.doc-group-header-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  background: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  text-transform: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.doc-group-header-link:hover {
+  color: var(--ink);
+}
+
+.doc-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--chalk-raised);
+  border: 1px solid var(--lane);
+  border-left: var(--rail) solid var(--lane-strong); /* the lane rail */
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  cursor: pointer;
+}
+
+.doc-row:hover {
+  border-color: var(--lane-strong);
+  border-left-color: inherit;
+}
+
+/* Row actions (project select, archive, delete) and the row checkbox stay
+   out of sight until there's a reason to look at them — hover, keyboard
+   focus anywhere in the row, the row's own checkbox is checked, or a
+   selection is already active elsewhere in the list. Opacity (not
+   display/visibility) keeps their layout space reserved so nothing jumps,
+   and keeps them in the DOM so screen readers and Tab still reach them. */
+.doc-actions,
+.doc-row .doc-check {
+  opacity: 0;
+  transition: opacity 120ms;
+}
+
+.doc-row:hover .doc-actions,
+.doc-row:focus-within .doc-actions,
+.doc-row:hover .doc-check,
+.doc-row:focus-within .doc-check,
+.doc-row:has(.doc-check:checked) .doc-check,
+.doc-list--selecting .doc-check {
+  opacity: 1;
+}
+
+/* Touch has no hover — the reveal-on-hover affordance would just hide
+   these controls permanently, so always show them there. */
+@media (pointer: coarse) {
+  .doc-actions,
+  .doc-row .doc-check {
+    opacity: 1;
+  }
+}
+
+.doc-title {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.doc-meta {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+/* Same look as .doc-meta but for prose that must wrap (help text, guest-
+   sharing copy) — .doc-meta's nowrap is for short tags like "v1" or dates. */
+.help-text {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-soft);
+  white-space: normal;
+  line-height: 1.5;
+}
+
+.settings-install-help {
+  margin-top: 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-soft);
+}
+
+.settings-install-help summary {
+  cursor: pointer;
+  color: var(--mdloop-ink);
+}
+
+.settings-install-help p {
+  margin: 6px 0 0;
+  line-height: 1.5;
+}
+
+.doc-signal {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--signal);
+  background: var(--signal-wash);
+  border-radius: 10px;
+  padding: 1px 8px;
+  white-space: nowrap;
+}
+
+.doc-signal--clear {
+  color: var(--resolved);
+  background: transparent;
+}
+
+/* Repo-linkage indicator (Phase 34.D) — deliberately quieter than
+   .doc-signal/.review-chip: it's provenance chrome, not a status a reviewer
+   needs to act on, so no background wash, just muted ink. */
+.source-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+/* Wraps .doc-title + the optional .doc-row-path underneath it, without
+   changing .doc-row's own flex sizing for its other children (Signal, chips,
+   badge, meta, actions) — same shape as .app-header-search-hit-main. */
+.doc-row-title-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* Repo-linkage location line (Unfiled/Archived/per-project lanes only —
+   the All lane's folder headers already show this, see the call site in
+   document-list.tsx) — same quiet mono treatment as
+   .app-header-search-hit-path, the Cmd+K search result's path line, so the
+   two read as one visual language rather than two invented ones. */
+.doc-row-path {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-soft);
+}
+
+/* Folder headers inside the home lane's per-project grouping (Phase 34.C)
+   span both masonry columns like .doc-group-header — a folder is a
+   structural divider, not a doc card, and letting it fall into the normal
+   auto-fill column would visually compete with its own indented children. */
+.doc-list-folder {
+  grid-column: 1 / -1;
+}
+
+.doc-list-folder .tree-children .doc-row {
+  margin-bottom: 8px;
+}
+
+.doc-list-folder .tree-children .doc-row:last-child {
+  margin-bottom: 0;
+}
+
+.doc-actions {
+  position: relative;
+  margin-left: auto;
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+/* Per-row kebab menu — same footprint/positioning recipe as
+   .app-header-menu/.doc-switcher-menu (absolute, right-aligned under the
+   trigger, chalk-raised, lane border, shadow, above everything at z-index
+   50). Nested inside .doc-actions so hovering the open menu still counts
+   as hovering the row, keeping the kebab from fading out mid-click. */
+.doc-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 200px;
+  max-height: 320px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 4px;
+  background: var(--chalk-raised);
+  border: 1px solid var(--lane);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
+  z-index: 50;
+}
+
+.doc-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  padding: 7px 10px;
+  font-size: 13px;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.doc-menu-item:hover {
+  background: var(--mdloop-wash);
+  color: var(--mdloop-ink);
+}
+
+.doc-menu-item--danger {
+  color: var(--danger);
+}
+
+.doc-menu-item--danger:hover {
+  background: var(--danger-wash);
+  color: var(--danger);
+}
+
+/* The current project/Unfiled destination — marked, not a valid pick. */
+.doc-menu-item:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.doc-menu-item:disabled:hover {
+  background: none;
+  color: var(--ink);
+}
+
+.doc-menu-item--current {
+  font-weight: 600;
+}
+
+.doc-menu-item-check {
+  margin-left: auto;
+}
+
+.doc-menu-separator {
+  height: 1px;
+  background: var(--lane);
+  margin: 4px 2px;
+}
+
+.doc-menu-heading {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--ink-soft);
+  padding: 6px 10px 2px;
+}
+
+.doc-project-select {
+  padding: 3px 6px;
+  font-size: 12px;
+  color: var(--ink-soft);
+  max-width: 140px;
+}
+
+/* Switch to another document in the same project, from the viewer's own
+   header — the title itself is the trigger, opening a dropdown of siblings
+   right below it (same footprint/positioning idea as the header search's
+   result list). */
+.doc-switcher {
+  position: relative;
+  display: flex;
+  min-width: 0;
+}
+
+.doc-title--switcher {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  border: 0;
+  background: none;
+  padding: 2px 4px;
+  margin: -2px -4px;
+  border-radius: var(--radius);
+  color: inherit;
+  cursor: pointer;
+}
+
+.doc-title--switcher:hover,
+.doc-title--switcher[aria-expanded='true'] {
+  background: var(--mdloop-wash);
+  color: var(--mdloop-ink);
+}
+
+.doc-switcher-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 320px;
+  /* Wide enough for the embedded ProjectTree's folder indent + chips
+     (Phase 33.E — this used to hold a flat 340px title-only list, before the
+     switcher grew a real folder hierarchy). */
+  max-width: 520px;
+  max-height: 420px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 4px;
+  background: var(--chalk-raised);
+  border: 1px solid var(--lane);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
+  z-index: 50;
+}
+
+.doc-switcher-menu--too-large {
+  padding: 12px;
+}
+
+.doc-switcher-menu .project-tree {
+  gap: 6px;
+}
+
+.doc-switcher-menu .tree-filter-input {
+  max-width: none;
+}
+
+.doc-switcher-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  padding: 6px 10px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.doc-switcher-item:hover {
+  background: var(--mdloop-wash);
+  color: var(--mdloop-ink);
+}
+
+.doc-switcher-item--current {
+  color: var(--mdloop-ink);
+  font-weight: 600;
+}
+
+/* ---------- Dropzone ---------- */
+
+/* The whole home content area is the drop target now (shell.tsx's
+   useDropTarget on .content, which is already position: relative) — this
+   overlay just paints that area while a file drag is active over it,
+   rather than a permanently-rendered block above the list. */
+.drop-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-content: center;
+  gap: 6px;
+  text-align: center;
+  margin: var(--space-3);
+  border: 1.5px dashed var(--mdloop);
+  border-radius: var(--radius);
+  background: var(--mdloop-wash);
+  color: var(--mdloop-ink);
+  pointer-events: none;
+}
+
+.dropzone-hint {
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+/* ---------- Confirm dialog ---------- */
+
+.confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgb(0 0 0 / 40%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.confirm-dialog {
+  background: var(--chalk-raised);
+  border: 1px solid var(--lane-strong);
+  border-radius: var(--radius);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 20%);
+  padding: var(--space-5);
+  width: min(380px, calc(100vw - 32px));
+}
+
+.confirm-dialog h3 {
+  margin: 0 0 8px;
+}
+
+.confirm-dialog p {
+  color: var(--ink-soft);
+  margin: 0 0 16px;
+  word-break: break-word;
+}
+
+.confirm-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+/* Optional "what changed?" note on the version-upload confirm (ADR 0003 §B). */
+.upload-note-field {
+  display: block;
+  margin: 0 0 16px;
+}
+
+.upload-note-label {
+  display: block;
+  font-size: 12px;
+  color: var(--ink-soft);
+  margin-bottom: var(--space-1);
+}
+
+.upload-note-field input {
+  width: 100%;
+}
+
+/* Typed-confirmation gate on ConfirmDialog (Phase 26.E org purge) — same
+   block shape as .upload-note-field, one level more serious (danger tone). */
+.confirm-match-field {
+  display: block;
+  margin: 0 0 16px;
+}
+
+.confirm-match-label {
+  display: block;
+  font-size: 12px;
+  color: var(--ink-soft);
+  margin-bottom: var(--space-1);
+}
+
+.confirm-match-field input {
+  width: 100%;
+  border-color: var(--danger);
+}
+
+/* ---------- Empty state ---------- */
+
+.empty {
+  text-align: center;
+  color: var(--ink-soft);
+  padding: 60px 0;
+}
+
+.empty h3 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0 0 6px;
+}
+
+/* ---------- Project form ---------- */
+
+.project-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 10px;
+}
+
+.project-form input[type='text'] {
+  flex: 1 0 100%;
+}
+
+.color-swatches {
+  display: flex;
+  gap: 4px;
+}
+
+.color-swatch {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 2px solid transparent;
+  padding: 0;
+}
+
+.color-swatch[aria-pressed='true'] {
+  border-color: var(--ink);
+}
+
+/* ---------- Error banner ---------- */
+
+.banner-error {
+  background: var(--danger-wash);
+  color: var(--danger);
+  border: 1px solid currentColor;
+  border-radius: var(--radius);
+  padding: 8px 14px;
+  margin-bottom: 16px;
+  font-size: 13px;
+}
+
+/* Pins the viewer's error banner directly under the document header — same
+   horizontal rhythm as the header above it — so it's always visible without
+   scrolling the content column (.banner-error supplies its own bottom
+   margin). */
+.viewer-error-slot {
+  padding: var(--space-3) 28px 0;
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 720px) {
+  .shell-body {
+    grid-template-columns: 1fr;
+  }
+
+  /* Off-canvas drawer (Phase 39.F), not simply hidden — the sidebar holds
+     the only way to switch lanes/projects or reach Archived, so hiding it
+     outright was lost function, not a layout blemish. Slides in from the
+     left over the content, same mechanic as the viewer's .outline-drawer;
+     .lane-drawer-backdrop (rendered only while open, see shell.tsx) sits
+     behind it and closes it on click. */
+  .sidebar {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 30;
+    width: min(84vw, 320px);
+    background: var(--chalk);
+    box-shadow: 4px 0 24px rgb(0 0 0 / 0.2);
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+  }
+
+  .sidebar--open {
+    transform: translateX(0);
+  }
+
+  .lane-drawer-backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: 29;
+    background: rgb(0 0 0 / 0.35);
+  }
+
+  .app-header-lane-trigger {
+    display: inline-flex;
+  }
+}
+
+/* ---------- Viewer ---------- */
+
+.viewer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.viewer-body {
+  position: relative;
+  display: grid;
+  /* Tab always reserves its own lane; the outline panel's lane is 0 wide
+     until opened, then it reflows content/rail/minimap right instead of
+     overlaying them — same idea as .bubbles-row's outline column. */
+  grid-template-columns: 28px 0px 1fr 340px 16px;
+  transition: grid-template-columns 0.2s ease;
+  flex: 1;
+  min-height: 0;
+}
+
+.viewer-body--outline {
+  grid-template-columns: 28px 240px 1fr 340px 16px;
+}
+
+.viewer-content-wrap {
+  position: relative;
+  overflow-y: auto;
+  padding: 28px 40px 120px;
+}
+
+/* The sheet: a raised, bright reading surface on the desk-colored
+   .viewer-content-wrap ground — serif prose, not app chrome. */
+.viewer-content {
+  max-width: 760px;
+  margin: 0 auto;
+  background: var(--chalk-raised);
+  border: 1px solid var(--lane);
+  border-radius: 10px;
+  box-shadow:
+    0 1px 2px rgb(55 48 32 / 0.08),
+    0 14px 36px rgb(55 48 32 / 0.1);
+  padding: 48px 56px 64px;
+  font-family: var(--font-doc);
+  font-size: 17px;
+  line-height: 1.75;
+}
+
+@media (max-width: 720px) {
+  /* Narrow viewports: the desk margin around the sheet is a deliberate
+     "paper on a desk" cue on desktop, but on a phone it's just width the
+     prose doesn't have to spare — shrink it toward full-bleed instead of
+     keeping the same fixed inset regardless of screen size. */
+  .viewer-content-wrap {
+    padding: 16px 8px 120px;
+  }
+
+  .viewer-content {
+    padding: 24px 20px 48px;
+  }
+}
+
+/* No rule meant links inherited the bare browser default (color-scheme:
+   light dark's UA blue) instead of a token — low contrast against
+   .callout's --mdloop-wash background in dark mode specifically. */
+.viewer-content a {
+  color: var(--mdloop-ink);
+}
+
+.viewer-content a:hover {
+  color: var(--mdloop);
+}
+
+/* Serif headings on the sheet — prose, not app chrome (--font-display is
+   for UI labels/titles outside the reading surface). */
+.viewer-content h1,
+.viewer-content h2,
+.viewer-content h3 {
+  font-family: var(--font-doc);
+  letter-spacing: -0.01em;
+}
+
+/* Document title block: the opening h1 reads as a title, not just a heading.
+   No border-bottom — the sheet's own edge frames the document now. */
+.viewer-content h1:first-of-type {
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  margin: 0 0 24px;
+}
+
+.viewer-content pre {
+  background: var(--chalk-raised);
+  border: 1px solid var(--lane);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  overflow-x: auto;
+}
+
+.viewer-content code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+
+.viewer-content table {
+  border-collapse: collapse;
+}
+
+.viewer-content th,
+.viewer-content td {
+  border: 1px solid var(--lane-strong);
+  padding: 6px 12px;
+}
+
+.viewer-missing {
+  height: 100%;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 8px;
+}
+
+/* ---------- Syntax highlighting (rehype-highlight / hljs) ---------- */
+
+.viewer-content pre code.hljs {
+  display: block;
+  font-family: var(--font-mono);
+  color: var(--ink);
+  background: transparent;
+  padding: 0;
+}
+
+.hljs-comment,
+.hljs-quote {
+  color: var(--code-comment);
+  font-style: italic;
+}
+
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-literal,
+.hljs-doctag,
+.hljs-name {
+  color: var(--code-keyword);
+}
+
+.hljs-string,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-regexp,
+.hljs-addition {
+  color: var(--code-string);
+}
+
+.hljs-number,
+.hljs-meta,
+.hljs-deletion {
+  color: var(--code-number);
+}
+
+.hljs-title,
+.hljs-title.class_,
+.hljs-title.function_,
+.hljs-section,
+.hljs-built_in {
+  color: var(--code-function);
+}
+
+.hljs-attr,
+.hljs-attribute,
+.hljs-variable,
+.hljs-template-variable,
+.hljs-type,
+.hljs-selector-attr,
+.hljs-selector-class,
+.hljs-tag {
+  color: var(--code-attr);
+}
+
+.hljs-emphasis {
+  font-style: italic;
+}
+
+.hljs-strong {
+  font-weight: 700;
+}
+
+/* ---------- GitHub-style callouts ---------- */
+
+.callout {
+  background: var(--mdloop-wash);
+  border-left: var(--rail) solid var(--mdloop);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  margin: 0 0 16px;
+}
+
+.callout-label {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0 0 4px;
+  color: var(--mdloop-ink);
+}
+
+.callout-body > :last-child {
+  margin-bottom: 0;
+}
+
+.callout--important {
+  border-left-width: 5px;
+}
+
+.callout--important .callout-label {
+  color: var(--mdloop);
+}
+
+.callout--warning,
+.callout--caution {
+  background: var(--signal-wash);
+  border-left-color: var(--signal);
+}
+
+.callout--warning .callout-label,
+.callout--caution .callout-label {
+  color: var(--signal);
+}
+
+/* Anchor highlights */
+
+mark.anchor-mark {
+  /* UA default for <mark> is black text regardless of theme — invisible on
+     dark grounds (worst on resolved marks, whose background is transparent). */
+  color: inherit;
+  border-radius: 2px;
+  padding: 1px 0;
+}
+
+/* A run spanning markup/paragraph boundaries is several sibling <mark>
+   elements (anchors/highlight.ts tags all but the true first --continued,
+   all but the true last --more). Square off the joining side of each so
+   only the run's real start/end keep the pill-shaped corner — a rounded
+   corner mid-sentence at every fragment join would read as separate
+   pieces even once the border edges themselves are merged below. */
+mark.anchor-mark--continued {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+mark.anchor-mark--more {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+mark.anchor-mark--open,
+mark.anchor-mark--replied {
+  background: var(--signal-wash);
+  box-shadow: inset 0 -2px var(--signal);
+}
+
+/* Quiet-marks default (ADR 0003 §F.5): a non-editing reader who hasn't
+   opened the rail yet gets a calm sheet — hairline only, no amber fill.
+   Lifted the moment the rail opens or a mark is selected (see viewer.tsx). */
+.viewer-content--quiet-marks mark.anchor-mark--open,
+.viewer-content--quiet-marks mark.anchor-mark--replied {
+  background: transparent;
+  box-shadow: inset 0 -1px var(--lane-strong);
+}
+
+mark.anchor-mark--resolved {
+  background: transparent;
+  box-shadow: inset 0 -2px var(--resolved);
+}
+
+/* Accepted-but-unmaterialized suggestion (ADR 0007 decision 6): quiet mark,
+   click to reveal. Deliberately its own hue (--accepted-pending, a muted
+   plum) rather than reusing --signal (open/replied) or --resolved (which
+   the suggestion card's own "accepted" chip already uses) — this state must
+   read as visually distinct from both a plain open thread and a genuinely
+   resolved one in the body, even though it's neither. */
+mark.anchor-mark--accepted-pending {
+  background: var(--accepted-pending-wash);
+  box-shadow: inset 0 -2px var(--accepted-pending);
+  cursor: pointer;
+}
+
+.viewer-content--quiet-marks mark.anchor-mark--accepted-pending {
+  background: transparent;
+  box-shadow: inset 0 -1px var(--lane-strong);
+}
+
+/* Inline body overlay (ADR 0007 decision 6): the struck-original + inserted-
+   proposed-text preview spliced in next to the mark when expanded. Reuses
+   the card's ins/del language (strike + wash) but tinted with the same
+   --accepted-pending hue as the mark itself, not --resolved/--danger like
+   .suggestion-diff or the Compare surface — this is a preview of a decision,
+   not a record of one, and must not be mistaken for a real diff. */
+.anchor-suggestion-overlay {
+  font-family: var(--font-doc);
+}
+
+.anchor-suggestion-overlay del {
+  text-decoration: line-through;
+  text-decoration-color: var(--accepted-pending);
+  color: var(--ink-soft);
+  background: transparent;
+}
+
+.anchor-suggestion-overlay ins {
+  text-decoration: none;
+  background: var(--accepted-pending-wash);
+  box-shadow: inset 0 -2px var(--accepted-pending);
+  padding: 0 1px;
+  margin-left: 2px;
+}
+
+.anchor-suggestion-overlay .suggestion-delete-note {
+  margin-left: 4px;
+}
+
+/* Full box by default (the common case: a selection that's one <mark>,
+   no markup crossed). A run split into several sibling <mark> fragments
+   (anchors/highlight.ts) gets the same top/bottom rule on every fragment —
+   colinear on a shared line, so they read as one band — but the left/right
+   edge only on the run's true first/last fragment (--continued/--more
+   below zero those out on the internal joins). Net effect: one bracketed
+   box with square internal joints and a cap only at the real start/end,
+   not a separate box per fragment and not a capless band either. */
+mark.anchor-mark--selected {
+  background: var(--mdloop-wash);
+  --anchor-edge-left: inset 2px 0 0 0 var(--mdloop);
+  --anchor-edge-right: inset -2px 0 0 0 var(--mdloop);
+  box-shadow:
+    inset 0 -2px var(--mdloop),
+    inset 0 2px var(--mdloop),
+    var(--anchor-edge-left),
+    var(--anchor-edge-right);
+}
+
+mark.anchor-mark--selected.anchor-mark--continued {
+  --anchor-edge-left: inset 0 0 0 0 transparent;
+}
+
+mark.anchor-mark--selected.anchor-mark--more {
+  --anchor-edge-right: inset 0 0 0 0 transparent;
+}
+
+/* Mermaid part selection */
+
+.mermaid-block svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.mermaid-block .selected-part {
+  outline: 2px solid var(--mdloop);
+  outline-offset: 2px;
+}
+
+.mermaid-fallback {
+  border-left: var(--rail) solid var(--danger);
+}
+
+/* ---------- Feature boundary fallback ---------- */
+
+/* One failed slot, not a failed page: quiet, inline, sized by its content, and
+   deliberately unlike .viewer-missing (the whole-page ErrorBoundary look) so a
+   broken block never reads as a broken app. Borrows .mermaid-fallback's danger
+   rail — same idea, same weight: "this one thing didn't render". */
+.feature-fallback {
+  border-left: var(--rail) solid var(--danger);
+  padding: 8px 0 8px 14px;
+  margin: 12px 0;
+}
+
+.feature-fallback-title {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+/* The raw source under the notice. Scrolls sideways on its own so a long line
+   never widens the sheet it sits in (Core Principle 4). */
+.feature-fallback-source {
+  margin: 8px 0 0;
+  max-height: 60vh;
+  overflow: auto;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink-soft);
+  white-space: pre;
+}
+
+/* Diagram commentability affordances: hover shows what's clickable, an
+   amber tint marks parts that already have an open thread. Selectors
+   mirror diagramAnchorFromTarget's closest() targets exactly. */
+.mermaid-block .node,
+.mermaid-block .edgePaths path,
+.mermaid-block path.flowchart-link,
+.mermaid-block g[class*='actor'],
+.mermaid-block rect.actor,
+.mermaid-block text.actor,
+.mermaid-block text.messageText {
+  cursor: pointer;
+}
+
+.mermaid-block .node:hover,
+.mermaid-block g[class*='actor']:hover,
+.mermaid-block rect.actor:hover,
+.mermaid-block text.actor:hover {
+  filter: drop-shadow(0 0 5px var(--mdloop-wash)) drop-shadow(0 0 1px var(--mdloop));
+}
+
+.mermaid-block .edgePaths path:hover,
+.mermaid-block path.flowchart-link:hover {
+  filter: drop-shadow(0 0 4px var(--mdloop-wash));
+  stroke: var(--mdloop) !important;
+}
+
+.mermaid-block text.messageText:hover {
+  fill: var(--mdloop);
+}
+
+.mermaid-block .has-open-comment rect,
+.mermaid-block .has-open-comment polygon,
+.mermaid-block .has-open-comment circle,
+.mermaid-block .has-open-comment ellipse,
+.mermaid-block .has-open-comment path {
+  stroke: var(--signal) !important;
+  stroke-width: 2px;
+}
+
+.mermaid-block path.has-open-comment {
+  stroke: var(--signal) !important;
+  stroke-width: 2.5px;
+}
+
+.mermaid-block text.has-open-comment {
+  fill: var(--signal);
+}
+
+/* Minimap: one thin lane of colored ticks */
+
+.minimap {
+  position: relative;
+  border-left: 1px solid var(--lane);
+  border-right: 1px solid var(--lane);
+  background: var(--chalk-raised);
+}
+
+/* Comment-density background, folded into the minimap instead of a separate
+   heat strip on the content's edge — one segment per outline section, same
+   fraction-of-source-length convention the ticks below use. Dimmed as a
+   group (not per-segment) so the ticks stay the dominant signal; each
+   segment's own opacity is still the raw 0..1 open-comment scale from
+   gutterSegments. Non-interactive and behind the ticks in both stacking
+   (painted first) and DOM order. Neutral --lane, not amber (ADR 0003 §F.1)
+   — it reads as structural section banding, not a second amber signal
+   restating the ticks in front of it. */
+.minimap-density {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.35;
+}
+
+.minimap-density-segment {
+  position: absolute;
+  left: 0;
+  right: 0;
+  background: var(--lane);
+}
+
+.minimap-tick {
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  height: 6px;
+  border: 0;
+  border-radius: 2px;
+  padding: 0;
+}
+
+.minimap-tick--open {
+  background: var(--signal);
+}
+
+.minimap-tick--replied {
+  background: var(--mdloop);
+}
+
+.minimap-tick--resolved {
+  background: var(--resolved);
+}
+
+.minimap-tick--orphan {
+  background: var(--lane-strong);
+}
+
+.minimap-tick--selected {
+  outline: 2px solid var(--ink);
+}
+
+/* Comment rail */
+
+/* No top padding here — .rail-close-row (the sticky filter header) owns
+   that inset itself so it can sit flush against .version-strip above,
+   instead of a strip of this background showing between the two. */
+.comment-rail {
+  /* Grid items stretch by default, but that only gives a *definite* height
+     the browser will actually clip to once we say so explicitly — without
+     it the rail grows to fit its content instead of filling the column. */
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--chalk);
+}
+
+/* The scrolling middle: everything below the filter row. `flex: 1` +
+   `min-height: 0` is what lets it shrink below its content's natural
+   height and actually scroll instead of pushing content off the rail. */
+.rail-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  /* Top padding matches the 12px `gap` below — `.rail-close-row` sits
+     outside this flex column now (it's a non-scrolling header, not part of
+     the scrollable list), so that gap no longer reaches it for free. */
+  padding: 12px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Keyboard-shortcuts trigger + popover in the filter row (Linear/Superhuman
+   pattern) — same anchor/popover shape as `.share-anchor`/`.share-panel`,
+   just smaller. Replaces a permanent footer bar that cost every view ~50px
+   of thread-list height even with zero comments. */
+.rail-shortcuts-anchor {
+  /* Own auto margin (not just `.rail-close-row`'s `justify-content`) so it
+     still clusters with the close button at the row's right edge on mobile,
+     where `.rail-close` becomes a third visible sibling instead of `none`. */
+  margin-left: auto;
+  position: relative;
+  display: flex;
+}
+
+.rail-shortcuts-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  width: max-content;
+  max-width: calc(100vw - 24px);
+  background: var(--chalk-raised);
+  border: 1px solid var(--lane);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
+  z-index: 50;
+  padding: 10px 12px;
+}
+
+.rail-shortcuts-popover dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 10px;
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.rail-shortcuts-popover dt {
+  color: var(--ink);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.rail-shortcuts-popover dd {
+  margin: 0;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+.composer,
+.thread {
+  background: var(--chalk-raised);
+  border: 1px solid var(--lane);
+  border-radius: var(--radius);
+  padding: 12px;
+}
+
+.thread {
+  position: relative;
+  border-left: var(--rail) solid var(--lane-strong);
+  cursor: pointer;
+}
+
+.thread-top-actions {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: var(--space-1);
+}
+
+.thread-resolve-check {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--lane-strong);
+  border-radius: 999px;
+  background: var(--chalk-raised);
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+
+.thread-resolve-check:hover {
+  border-color: var(--resolved);
+  color: var(--resolved);
+  background: var(--insert-wash);
+}
+
+.thread-delete-check:hover {
+  border-color: var(--danger);
+  color: var(--danger);
+  background: var(--danger-wash);
+}
+
+.thread--open,
+.thread--replied {
+  border-left-color: var(--signal);
+}
+
+.thread--resolved {
+  border-left-color: var(--resolved);
+}
+
+.thread--selected {
+  border-color: var(--mdloop);
+}
+
+/* Finish sweep: the one reward moment — a soft green highlight sweeps
+   across a thread card the instant it's resolved, from any resolve path
+   (thread card button, keyboard 'e', triage). See viewer.tsx's sweepId
+   state, applied as this class for the ~500ms window before the thread
+   leaves the open list. The global prefers-reduced-motion rule (top of
+   file) already zeroes animation-duration via !important, so no separate
+   override is needed here. */
+.thread--sweep {
+  position: relative;
+  overflow: hidden;
+}
+
+.thread--sweep::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 30%, rgb(21 128 61 / 0.2) 50%, transparent 70%);
+  transform: translateX(-110%);
+  animation: thread-sweep 450ms ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes thread-sweep {
+  to {
+    transform: translateX(110%);
+  }
+}
+
+.thread-meta {
+  margin-bottom: 4px;
+}
+
+.thread-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--mdloop-wash);
+  color: var(--mdloop-ink);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  cursor: default;
+}
+
+.thread-reply .thread-avatar {
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+.thread-quote,
+.composer-quote {
+  margin: 0 0 8px;
+  padding: 2px 8px;
+  border-left: 2px solid var(--lane-strong);
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-family: var(--font-mono);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Clears the top-right resolve/edit/delete buttons (up to three, side by
+   side: 3×22px + 2×4px gap + 10px right offset). */
+.thread .thread-quote {
+  padding-right: 84px;
+}
+
+.thread-orphan-note {
+  font-size: 11px;
+  color: var(--ink-soft);
+  font-style: italic;
+}
+
+/* A suggestion's anchor quote gets the same amber accent as its status chip
+   below — ties the "this text is up for change" signal to the exact range,
+   without touching the thread card's own lane border (orphan follows the
+   same precedent: a note, not a border override). */
+.thread--suggestion .thread-quote {
+  border-left-color: var(--signal);
+}
+
+.suggestion-block {
+  margin-bottom: 8px;
+}
+
+.suggestion-chip {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  border-radius: 10px;
+  padding: 2px 8px;
+  margin-bottom: 6px;
+  color: var(--signal);
+  background: var(--signal-wash);
+}
+
+.suggestion-chip--accepted {
+  color: var(--resolved);
+  background: var(--insert-wash);
+}
+
+.suggestion-chip--rejected {
+  color: var(--danger);
+  background: var(--danger-wash);
+}
+
+.suggestion-diff {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0 0 6px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.suggestion-diff ins {
+  text-decoration: none;
+  background: var(--insert-wash);
+  box-shadow: inset 0 -2px var(--resolved);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.suggestion-arrow {
+  color: var(--ink-soft);
+  flex-shrink: 0;
+}
+
+.suggestion-delete-note {
+  color: var(--danger);
+  font-size: 12px;
+}
+
+.suggestion-actions {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+/* Collapsed accepted/rejected suggestion: one status row standing in for the
+   chip + diff + applied-leg link that used to always render (signal-budget
+   pass). Click reveals .suggestion-summary-body with the same content the
+   open-state diff shows inline. */
+.suggestion-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  border: 0;
+  border-radius: var(--radius);
+  padding: 5px 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.suggestion-status--accepted {
+  color: var(--resolved);
+  background: var(--insert-wash);
+}
+
+.suggestion-status--rejected {
+  color: var(--danger);
+  background: var(--danger-wash);
+}
+
+.suggestion-status-text {
+  font-weight: 600;
+}
+
+.suggestion-status-hint {
+  margin-left: auto;
+  font-family: var(--font-body);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.75;
+}
+
+.suggestion-summary-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 6px 0 6px 8px;
+  padding-left: 8px;
+  border-left: 2px solid var(--lane-strong);
+}
+
+.suggestion-summary-body .suggestion-diff {
+  margin: 0;
+}
+
+/* Compact reanchor-diff trigger, sitting in .thread-meta next to the avatar
+   instead of its own full-width line (signal-budget pass — same affordance,
+   less vertical space). */
+.thread-diff-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  background: none;
+  border-radius: 10px;
+  padding: 0 7px;
+  margin-left: 6px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-soft);
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+.thread-diff-chip:hover {
+  color: var(--mdloop-ink);
+  background: var(--mdloop-wash);
+}
+
+/* API-key attribution: a comment/reply/version made via an API key. */
+.via-key-chip {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--mdloop-ink);
+  background: var(--mdloop-wash);
+  border-radius: 10px;
+  padding: 0 7px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.thread-body {
+  margin: 0 0 6px;
+}
+
+.thread-body--editable {
+  cursor: text;
+}
+
+/* A stored @mention, highlighted quietly (ADR 0003 §D): the conversation blue
+   carried as weight + a hairline underline, not a fill — no new hue, and calm
+   enough not to compete with anchor marks on the sheet. */
+.mention {
+  color: var(--mdloop);
+  font-weight: 500;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--mdloop) 35%, transparent);
+  text-underline-offset: 2px;
+}
+
+/* @mention picker in the composer (ADR 0003 §D): a small doc-scoped dropdown
+   anchored under the textarea. */
+.composer-field {
+  position: relative;
+}
+
+.mention-menu {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% - 2px);
+  z-index: 20;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--chalk);
+  border: 1px solid var(--lane-strong);
+  border-radius: 6px;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 12%);
+  max-height: 168px;
+  overflow-y: auto;
+}
+
+.mention-option {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.mention-option--active,
+.mention-option:hover {
+  background: var(--lane);
+}
+
+/* In-rail comment search (ADR 0003 §C): rail chrome, sitting under the close row
+   above the thread list. */
+.rail-search {
+  margin: 0 0 var(--space-2);
+}
+
+.rail-search input {
+  width: 100%;
+}
+
+.rail-search-empty,
+.rail-search-elsewhere {
+  margin: 6px 2px;
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+.thread-reply-btn {
+  display: inline-flex;
+  margin-left: 6px;
+  vertical-align: middle;
+  padding: 2px;
+}
+
+.thread-edit {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.thread-edit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.thread-edit-field textarea {
+  width: 100%;
+  /* Starts as a single line, like the reply box below it — grows only if
+     the author drags the resize handle or the content wraps. */
+  height: 34px;
+  min-height: 34px;
+  resize: vertical;
+}
+
+.thread-edit-actions {
+  display: flex;
+  flex-direction: row;
+  gap: var(--space-1);
+}
+
+.char-count {
+  display: block;
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-soft);
+}
+
+.char-count--limit {
+  color: var(--danger);
+}
+
+/* ---------- Rail view mode: List vs Bubbles ---------- */
+
+/* Compact icon-only pair in the topbar — always available, either mode. */
+.mode-toggle-inline {
+  display: flex;
+  gap: 2px;
+}
+
+.mode-toggle-inline--on {
+  background: var(--mdloop-wash);
+  border-color: var(--mdloop);
+  color: var(--mdloop-ink);
+}
+
+/* Bubbles mode replaces the rail/minimap grid with a single flex column:
+   a slim toolbar (filters + whole-document trigger), then the three-way
+   row of [left margin][content][right margin]. */
+.viewer-body--bubbles {
+  display: flex;
+  flex-direction: column;
+}
+
+.bubbles-layout {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Bubbles mode has no rail to anchor the filter chips to, so they get their
+   own slim toolbar row above the three-way [left margin][content][right
+   margin] row — right-aligned to echo where the rail/minimap sit in List
+   mode, rather than centered like the old header-chrome placement. Not
+   sticky: .bubbles-layout itself doesn't scroll (only .viewer-content-wrap
+   inside the middle column does), so it never needs to be. */
+.bubbles-chips-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--space-2) 16px;
+  border-bottom: 1px solid var(--lane);
+  background: var(--chalk-raised);
+}
+
+/* Document-specific chrome, anchored directly under the app header (not
+   sticky, not inside the scrolling content) — every document function lives
+   in one place, and it never moves regardless of scroll. */
+.document-header {
+  display: grid;
+  /* Was a three-column 1fr auto 1fr with the filter chips centered between
+     left/right clusters — the chips now live on the comment surface itself
+     (rail's sticky header in List, a toolbar row in Bubbles), so the center
+     column is gone; two clusters just need their ends anchored. */
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-2) 28px;
+  background: var(--chalk-raised);
+  border-bottom: 1px solid var(--lane);
+}
+
+/* Two visually-equivalent action clusters — same gap so the row reads as
+   one rhythm, not two independently-tuned ones. */
+.document-header-left,
+.document-header-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.document-header-left {
+  justify-self: start;
+}
+
+.document-header-right {
+  justify-self: end;
+}
+
+/* Wraps the breadcrumb (path-backed docs only) above the <h2> title so the
+   trail reads path-then-title — everything else in .document-header-left
+   stays a plain row, only the title gets a second line. */
+.document-title-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* CLI-owned, read-only folder trail (Document.path minus its filename) —
+   same quiet mono face as .doc-meta, deliberately not the same weight as
+   the title next to it. No links: path is never a navigation target. */
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+.breadcrumb-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.breadcrumb-sep {
+  color: var(--ink-soft);
+  opacity: 0.6;
+}
+
+.bubbles-row {
+  display: grid;
+  /* Tab always reserves its own lane; the outline panel's lane is 0 wide
+     until opened, then it reflows the bubbles right instead of overlaying
+     them — same idea as .viewer-body--outline, generalized to bubbles
+     mode's extra columns. */
+  grid-template-columns: 28px 0px 260px 1fr 260px 16px;
+  transition: grid-template-columns 0.2s ease;
+  flex: 1;
+  min-height: 0;
+}
+
+/* The wrapping <div className="outline-drawer"> disappears from the box
+   tree here so its tab/panel children become direct grid items with their
+   own tracks, instead of one unsized absolutely-positioned overlay — shared
+   by both list mode's .viewer-body grid and bubbles mode's .bubbles-row. */
+.viewer-body .outline-drawer,
+.bubbles-row .outline-drawer {
+  display: contents;
+}
+
+.viewer-body .outline-tab,
+.bubbles-row .outline-tab {
+  position: static;
+  height: 100%;
+}
+
+.viewer-body .outline-panel,
+.bubbles-row .outline-panel {
+  position: static;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  transform: none;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* 224px, not the 240px column width — .outline-panel's own 8px+8px
+   horizontal padding (border-box) eats into that first, so a bare 240px
+   here overflows the panel's actual content box by 16px, which
+   overflow-x: hidden then clips: the close button, pushed to the far
+   right by .outline-head's space-between, is exactly what disappears. */
+.viewer-body .outline-panel .outline-item,
+.viewer-body .outline-panel .outline-head,
+.bubbles-row .outline-panel .outline-item,
+.bubbles-row .outline-panel .outline-head {
+  min-width: 224px;
+}
+
+/* Outline panel takes its own column by collapsing the left margin lane
+   (bubbles there move to the right canvas, see viewer.tsx's place())
+   rather than adding 240px on top of the existing tracks — that would
+   force the 1fr content column to shrink by the outline's full width.
+   Net cost to content is ~20px (260px freed minus 240px taken), not 240px. */
+.bubbles-row--outline {
+  grid-template-columns: 28px 240px 0px 1fr 260px 16px;
+}
+
+/* Left/right margins: overflow-hidden viewports whose canvas is transformed
+   (not scrolled) to mirror the content column's scroll position 1:1, so
+   bubbles stay glued beside their anchor as you scroll. */
+/* Fixed viewport mask — must NOT itself be transformed, or its own clip
+   region would slide away along with the content it's supposed to clip.
+   The scroll-mirroring transform goes on .bubble-canvas-inner instead. */
+.bubble-canvas {
+  position: relative;
+  overflow: hidden;
+  /* Top padding must stay 0. bubble-card's containing block is
+     .bubble-canvas-inner, an unpadded normal-flow child of this element —
+     rawContentOffset already measures each anchor's position relative to
+     .viewer-content-wrap's own top (its padding cancels out of that
+     subtraction), so this element's top padding is the ONLY thing left
+     that can push a bubble away from its anchor. Any nonzero value here is
+     a constant vertical misalignment between every bubble and its mark. */
+  padding: 0 12px 20px;
+}
+
+.bubble-canvas-inner {
+  position: relative;
+  height: 100%;
+}
+
+.bubble-card {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  transition: top 0.15s ease;
+}
+
+/* Bubbles mode: margin notes, not filed cards — the box goes away and only
+   the state-colored rail remains. Top/right/bottom borders are zeroed
+   individually (not via the `border` shorthand) so border-left-color is
+   left untouched — the .thread--open/--resolved/--selected rules below
+   still own that property and keep applying unchanged. */
+.bubble-card .thread {
+  border-top: 0;
+  border-right: 0;
+  border-bottom: 0;
+  border-left-width: 2px;
+  border-left-style: solid;
+  background: transparent;
+  border-radius: 0;
+  padding: 2px 0 2px 12px;
+}
+
+.bubbles-empty {
+  padding: 16px;
+}
+
+/* A fresh draft's brief first phase: right at the selection, before it
+   snaps into its assigned left/right lane (see draftPhase in viewer.tsx).
+   top/left come from the selection's own getBoundingClientRect, so this
+   is positioned in fixed/viewport coordinates, same coordinate space. */
+.draft-anchor-popover {
+  position: fixed;
+  width: 280px;
+  z-index: 40;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
+  border-radius: var(--radius);
+}
+
+.thread-reply {
+  margin: 0 0 6px;
+  padding-left: 10px;
+  border-left: 2px solid var(--lane);
+  color: var(--ink-soft);
+}
+
+.thread-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.thread-actions .thread-upvote {
+  flex-shrink: 0;
+}
+
+.thread-actions input,
+.thread-reply-input-row input[type='text'] {
+  flex: 1;
+}
+
+.composer textarea {
+  width: 100%;
+  min-height: 70px;
+  font-size: 14px;
+  resize: vertical;
+}
+
+.composer-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+/* ---------- Suggested edits (Phase C, ADR 0002) ---------- */
+
+.composer-suggest-toggle {
+  align-self: flex-start;
+  margin-top: 6px;
+  font-size: 12px;
+  padding: 3px 8px;
+  color: var(--ink-soft);
+}
+
+.composer-suggest-toggle--on {
+  color: var(--signal);
+  background: var(--signal-wash);
+  border-radius: var(--radius);
+}
+
+.composer-suggestion {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.composer-suggestion textarea {
+  width: 100%;
+  min-height: 50px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  resize: vertical;
+}
+
+.theme-toggle {
+  font-size: 12px;
+}
+
+.theme-toggle--floating {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 20;
+}
+
+.brand-mark {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  background: none;
+  padding: 4px;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 18px;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.brand-mark:hover {
+  color: var(--mdloop-ink);
+}
+
+.brand-mark--inline {
+  position: static;
+  top: auto;
+  left: auto;
+  z-index: auto;
+  flex-shrink: 0;
+}
+
+.doc-title--link {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.doc-title--link:hover {
+  color: var(--mdloop-ink);
+  text-decoration: underline;
+}
+
+@media (max-width: 899px) {
+  .viewer-body {
+    grid-template-columns: 1fr;
+  }
+
+  .minimap,
+  .comment-rail {
+    display: none;
+  }
+}
+
+/* ---------- Versions + diff (Phase 6) ---------- */
+
+.thread-badge {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--mdloop-ink);
+  background: var(--mdloop-wash);
+  border-radius: 10px;
+  padding: 0 7px;
+  margin-bottom: 6px;
+}
+
+.thread-diff-link {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  padding: 0 4px;
+  margin-bottom: 6px;
+}
+
+/* ---------- Compare surface (ADR 0003 §A.7) ----------
+   A transient full-sheet view over the viewer. Two accent families never
+   light the same sheet: Compare owns change (green/red), and every
+   conversation signal (anchor amber, diagram tint, density, callout amber)
+   is suppressed here — most for free, since the sheet renders its own
+   MarkdownView instances with no anchor/diagram props (§A.8). */
+.compare-surface {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: var(--chalk);
+  display: flex;
+  flex-direction: column;
+}
+
+.compare-head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--lane);
+  background: var(--chalk-raised);
+}
+
+.compare-head-titles {
+  flex: 1;
+  min-width: 0;
+}
+
+.compare-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 15px;
+  margin: 0;
+}
+
+.compare-subtitle {
+  color: var(--ink-soft);
+  font-size: 13px;
+  margin: 2px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.compare-tabs {
+  display: flex;
+  gap: var(--space-1);
+  flex-shrink: 0;
+}
+
+.compare-tab {
+  border: 1px solid var(--lane-strong);
+  background: transparent;
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 4px 12px;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.compare-tab--on {
+  background: var(--mdloop-wash);
+  border-color: var(--mdloop);
+  color: var(--mdloop-ink);
+}
+
+.compare-tab:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.compare-notice {
+  color: var(--ink-soft);
+  font-size: 13px;
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--lane);
+}
+
+.compare-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-4);
+}
+
+.compare-purged {
+  max-width: 640px;
+  margin: 0 auto;
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+
+/* The rendered sheet reuses .viewer-content's serif reading treatment (it also
+   carries the class) — this only centers and lifts it off the desk. */
+.compare-sheet {
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+/* A washed block reads as a marked-up manuscript, not a code review: the
+   low-saturation change washes over 17px serif prose. */
+.compare-block--added,
+.compare-block--removed,
+.compare-block--modified {
+  padding: 2px 12px;
+  border-radius: var(--radius);
+  margin-bottom: var(--space-2);
+}
+
+/* Inset edge mirrors mark.anchor-mark's box-shadow construction. */
+.compare-block--added {
+  background: var(--insert-wash);
+  box-shadow: inset 2px 0 var(--resolved);
+}
+
+.compare-block--removed {
+  background: var(--danger-wash);
+  box-shadow: inset 2px 0 var(--danger);
+  color: var(--danger);
+  text-decoration: line-through;
+  text-decoration-color: var(--danger);
+}
+
+/* Modified is a neutral container, not a third color — a plain lane rail. */
+.compare-block--modified {
+  border-left: 2px solid var(--lane-strong);
+  border-radius: 0;
+}
+
+/* Conversation overlay (ADR 0003 §A.10): a changed block that carries open
+   comment threads gets ONE neutral mono chip, top-right of the block. The
+   change sheet stays two-hue (green/red) — conversation gets zero color here,
+   so this is --lane fill over --ink-soft, never amber/blue and never a number.
+   The slot is the positioning context; the chip floats in its corner. */
+.compare-block-slot {
+  position: relative;
+}
+
+.compare-thread-chip {
+  position: absolute;
+  top: 4px;
+  right: 8px;
+  z-index: 1;
+  margin-bottom: 0;
+  background: var(--lane);
+  color: var(--ink-soft);
+  border: none;
+  cursor: pointer;
+}
+
+.compare-thread-chip:hover {
+  background: var(--lane-strong);
+  color: var(--mdloop-ink);
+}
+
+.compare-thread-chip:focus-visible {
+  outline: 2px solid var(--mdloop);
+  outline-offset: 1px;
+}
+
+/* Chips collapse on mobile single-column (ADR 0003 §A.10) — hidden entirely;
+   the per-block count has nowhere calm to sit beside the narrow sheet. */
+@media (max-width: 899px) {
+  .compare-thread-chip {
+    display: none;
+  }
+}
+
+.compare-before {
+  margin-top: var(--space-1);
+}
+
+.compare-before > summary {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+
+.compare-before-body {
+  margin-top: var(--space-1);
+  padding-left: var(--space-2);
+  border-left: 2px solid var(--lane);
+  color: var(--ink-soft);
+}
+
+/* Tier-2 word runs (§A.2): the modified pair as one flowing serif line, inside
+   the same neutral lane rail as the tier-1 modified block. pre-wrap keeps the
+   flattened text's own spacing so ins/del sit exactly where the words changed. */
+.compare-runs {
+  padding: 2px 12px;
+  margin-bottom: var(--space-2);
+  border-left: 2px solid var(--lane-strong);
+  border-radius: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ins/del mirror .diff-body's washes; del adds the manuscript strikethrough so
+   the removed words read as struck, not merely tinted. */
+.compare-run--ins {
+  text-decoration: none;
+  background: var(--insert-wash);
+  box-shadow: inset 0 -2px var(--resolved);
+}
+
+.compare-run--del {
+  background: var(--danger-wash);
+  color: var(--danger);
+  text-decoration: line-through;
+  text-decoration-color: var(--danger);
+}
+
+/* Tier-2 line runs (§A.9): a code fence as monospace diff rows, each row washed
+   whole by its op, scrolling sideways so long lines never widen the sheet. */
+.compare-runs--code {
+  padding: 6px 0;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.7;
+  white-space: normal;
+  overflow-x: auto;
+}
+
+.compare-code-row {
+  display: block;
+  padding: 0 12px;
+  white-space: pre;
+}
+
+.compare-code-row--ins {
+  background: var(--insert-wash);
+}
+
+.compare-code-row--del {
+  background: var(--danger-wash);
+  color: var(--danger);
+}
+
+/* Changed diagram (§A.9): a neutral chip + Before/After toggle over both legs.
+   No change wash on the diagram itself — a diagram is not diffed, it is shown,
+   so the only mark is the mono chip announcing that it moved. */
+.compare-diagram {
+  border-left: 2px solid var(--lane-strong);
+  padding-left: 12px;
+}
+
+.compare-diagram-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: 6px;
+}
+
+/* Neutral --lane fill (not the amber diagram tint of the reading surface). */
+.compare-diagram-chip {
+  background: var(--lane);
+  margin-bottom: 0;
+}
+
+.compare-diagram-toggle {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.compare-diagram-btn {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 1px 9px;
+  border: 1px solid var(--lane-strong);
+  background: transparent;
+  color: var(--ink-soft);
+  cursor: pointer;
+  border-radius: 3px;
+}
+
+.compare-diagram-btn--on {
+  background: var(--lane);
+  color: var(--mdloop-ink);
+}
+
+/* Explicit conversation-signal suppression: warning/caution callouts are the
+   one amber that would leak into a rendered block. Neutralize to a plain lane
+   treatment (§A.8) — everything else never renders here. */
+.compare-surface .callout--warning,
+.compare-surface .callout--caution {
+  background: var(--chalk-raised);
+  border-left-color: var(--lane-strong);
+}
+
+.compare-surface .callout--warning .callout-label,
+.compare-surface .callout--caution .callout-label {
+  color: var(--ink-soft);
+}
+
+.diff-body {
+  margin: 0;
+  padding: 14px 16px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.diff-body ins {
+  text-decoration: none;
+  background: var(--insert-wash);
+  box-shadow: inset 0 -2px var(--resolved);
+}
+
+.diff-body del {
+  background: var(--danger-wash);
+  color: var(--danger);
+}
+
+/* ---------- Share panel (Phase 7; popover anchoring — UX pass iter. 5) ---------- */
+
+/* Wraps the Share trigger in the document header's right cluster — the
+   panel below is the containing block's only positioned descendant, same
+   idea as .doc-switcher one section up. One location for this feature in
+   both List and Bubbles mode, instead of a rail-top render in one and a
+   fixed floating card in the other. */
+.share-anchor {
+  position: relative;
+  display: flex;
+}
+
+.share-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  width: min(350px, calc(100vw - 24px));
+  max-height: 70vh;
+  overflow-y: auto;
+  /* overflow-y: auto forces overflow-x to compute auto too — clip instead
+     of scrolling sideways when a child (long email in a select, a nowrap
+     grant meta) runs wider than the panel. */
+  overflow-x: hidden;
+  background: var(--chalk-raised);
+  border: 1px solid var(--lane);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
+  z-index: 50;
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Link/directory sections — whichever one applies for this org's sharing
+   mode (never both). Share-with-a-guest below is always shown and keeps
+   its own .share-guest divider, so only one of these ever needs a
+   sidebar-heading directly under the panel head with no extra border. */
+.share-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.share-panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.share-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.share-controls select {
+  /* A select's intrinsic width is its longest option — one long org email
+     would otherwise push the whole panel wide. */
+  max-width: 100%;
+}
+
+.share-controls input {
+  flex: 1 1 160px;
+}
+
+.share-token {
+  background: var(--mdloop-wash);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
+.share-token code {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  word-break: break-all;
+  user-select: all;
+}
+
+.share-grant-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.share-grant {
+  display: flex;
+  /* The permission/expiry meta is nowrap and can't shrink — let the row
+     wrap it onto its own line instead of running past the panel edge. */
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+/* Wrap, don't truncate: a long guest email should fold onto a second line
+   inside the popover, not ellipsize or clip at its edge. */
+.share-grant > span:first-child {
+  flex: 1 1 100%;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.share-grant .doc-meta {
+  white-space: normal;
+}
+
+/* ---------- Sign-off / review ---------- */
+
+.review-anchor {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.review-chip {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  border-radius: 10px;
+  padding: 3px 9px;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--ink-soft);
+  background: var(--lane);
+}
+
+.review-chip--button {
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+
+.review-chip--button.review-chip--open,
+.review-chip--button:hover {
+  border-color: var(--lane-strong);
+}
+
+.review-chip--in_review {
+  color: var(--signal);
+  background: var(--signal-wash);
+}
+
+/* Ink on --signal-wash with a stronger border, not --danger — red is
+   reserved for destruction and would collide with diff-deletion color
+   (ADR 0003 §F.3). Reads as "attention", not "error". */
+.review-chip--changes_requested {
+  color: var(--ink);
+  background: var(--signal-wash);
+  border: 1px solid var(--signal);
+}
+
+.review-chip--approved {
+  color: var(--resolved);
+  background: var(--insert-wash);
+}
+
+.review-verdict-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.review-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  width: min(360px, calc(100vw - 24px));
+  max-height: 70vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--chalk-raised);
+  border: 1px solid var(--lane);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
+  z-index: 50;
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.review-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.review-note {
+  width: 100%;
+  resize: vertical;
+}
+
+.review-reviewer-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.review-reviewer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.review-reviewer > span:first-child {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* ---------- Org settings (Phase 15) ---------- */
+
+.settings-section {
+  background: var(--chalk-raised);
+  border: 1px solid var(--lane);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.settings-section-head h3 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 15px;
+  margin: 0 0 2px;
+}
+
+.settings-section-head p {
+  margin: 0 0 14px;
+}
+
+.invite-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.invite-form input:not([type='number']) {
+  flex: 1 1 220px;
+}
+
+.invite-form input[type='number'] {
+  flex: 0 0 auto;
+  width: 80px;
+}
+
+.invite-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.invite-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  padding: 8px 10px;
+  border: 1px solid var(--lane);
+  border-radius: var(--radius);
+}
+
+.invite-email {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+}
+
+.invite-status {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  border-radius: 10px;
+  padding: 1px 8px;
+  white-space: nowrap;
+}
+
+.invite-status--pending {
+  color: var(--signal);
+  background: var(--signal-wash);
+}
+
+.invite-status--accepted {
+  color: var(--resolved);
+  background: transparent;
+}
+
+.invite-status--revoked,
+.invite-status--expired {
+  color: var(--ink-soft);
+  background: var(--lane);
+}
+
+.provisioning-toggle {
+  display: flex;
+  gap: 8px;
+}
+
+.provisioning-toggle .btn[aria-pressed='true'] {
+  border-color: var(--mdloop);
+  background: var(--mdloop-wash);
+  color: var(--mdloop-ink);
+  font-weight: 600;
+}
+
+@media (max-width: 720px) {
+  .invite-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .invite-email {
+    max-width: 100%;
+  }
+
+  .invite-form input:not([type='number']) {
+    flex-basis: 100%;
+  }
+}
+
+/* ---------- Settings shell + shared primitives (Phase 39.A) ----------
+   docs/design-system.md "Layout: the settings rail" + "Signature: the usage
+   lane". Every token here is one already declared at :root. */
+
+.settings-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.settings-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.settings-rail {
+  width: var(--sidebar-w);
+  flex-shrink: 0;
+  overflow-y: auto;
+  padding: 20px 12px;
+  border-right: 1px solid var(--lane);
+}
+
+.settings-rail-group {
+  margin-bottom: 20px;
+}
+
+.settings-rail-heading {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  padding: 0 10px 6px;
+}
+
+.settings-rail-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.settings-rail-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  padding: 8px 10px;
+  font-size: 13px;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.settings-rail-item:hover {
+  background: var(--mdloop-wash);
+  color: var(--mdloop-ink);
+}
+
+.settings-rail-item[aria-current='page'] {
+  background: var(--mdloop-wash);
+  color: var(--mdloop-ink);
+  font-weight: 600;
+}
+
+.settings-back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: none;
+  padding: 0;
+  margin-bottom: 16px;
+  color: var(--ink-soft);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.settings-back-button:hover {
+  color: var(--mdloop-ink);
+}
+
+@media (max-width: 720px) {
+  .settings-rail {
+    width: 100%;
+    border-right: 0;
+  }
+}
+
+.settings-usage-lanes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+}
+
+/* ---------- Meter: the usage lane ----------
+   docs/design-system.md "Signature: the usage lane" — the 3px document-row
+   rail turned horizontal. Quiet neutral fill, crosses to amber --signal at
+   >=80% of ceiling and stays amber at the ceiling — never --danger red. */
+
+.meter {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.meter-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+}
+
+.meter-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.meter-track {
+  flex: 1;
+  min-width: 60px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--lane);
+  overflow: hidden;
+}
+
+.meter-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--lane-strong);
+  transition: width 120ms ease;
+}
+
+.meter--signal .meter-fill {
+  background: var(--signal);
+}
+
+.meter-numerals {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.meter-unlimited {
+  color: var(--ink-soft);
+}
+
+.meter-flag {
+  align-self: flex-start;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--signal);
+}
+
+/* ---------- Badge: tone-based status pill ----------
+   Generalizes .invite-status--*/
+.admin-tier-badge. */ .badge {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  border-radius: 10px;
+  padding: 1px 8px;
+  white-space: nowrap;
+}
+
+.badge--neutral {
+  color: var(--ink-soft);
+  background: var(--lane);
+}
+
+.badge--signal {
+  color: var(--signal);
+  background: var(--signal-wash);
+}
+
+.badge--resolved {
+  color: var(--resolved);
+  background: transparent;
+}
+
+.badge--danger {
+  color: var(--danger);
+  background: var(--danger-wash);
+}
+
+/* ---------- Tooltip: hover + focus, replacing keyboard-unreachable title= ---------- */
+
+.tooltip-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.tooltip-bubble {
+  /* `top`/`left` are set inline from JS (tooltip.tsx) — `fixed` so the
+     bubble escapes any scrollable ancestor's clipping box (e.g.
+     `.version-strip`'s `overflow-x: auto`, which forces `overflow-y: auto`
+     too and would otherwise clip an absolutely-positioned bubble that
+     renders above its trigger). */
+  position: fixed;
+  z-index: 30;
+  max-width: 260px;
+  width: max-content;
+  background: var(--ink);
+  color: var(--chalk-raised);
+  font-size: 12px;
+  line-height: 1.4;
+  padding: 6px 10px;
+  border-radius: var(--radius);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.2);
+  pointer-events: none;
+}
+
+/* ---------- Record: hairline key/value ledger ----------
+   Generalizes the former .admin-detail-grid. Stacks label-over-value below
+   720px (docs/design-system.md responsive table rule). */
+
+.record {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 16px;
+  margin: 0 0 4px;
+  font-size: 13px;
+}
+
+.record dt {
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  align-self: center;
+}
+
+.record dd {
+  margin: 0;
+}
+
+@media (max-width: 720px) {
+  .record {
+    grid-template-columns: 1fr;
+    gap: 2px 0;
+  }
+
+  .record dt {
+    margin-top: 8px;
+  }
+
+  .record dt:first-child {
+    margin-top: 0;
+  }
+}
+
+/* ---------- DataTable: header + rows + empty slot ----------
+   Members/invoices/audit log (later sub-phases). Scrolls inside its own
+   container at the 900-1079px tablet-landscape band — the page body never
+   scrolls horizontally. Below 720px, rows collapse to stacked
+   label/value blocks instead (rendered as a different DOM shape by
+   data-table.tsx, not a CSS-only collapse). */
+
+.data-table-scroll {
+  overflow-x: auto;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.data-table th,
+.data-table td {
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--lane);
+  white-space: nowrap;
+}
+
+.data-table th {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+
+@media (max-width: 1079px) {
+  .data-table-col--shed {
+    display: none;
+  }
+}
+
+.data-table-empty {
+  color: var(--ink-soft);
+  font-size: 13px;
+  padding: 12px 0;
+}
+
+.data-table-stack {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.data-table-stack-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--lane);
+  border-radius: var(--radius);
+}
+
+.data-table-stack-cell {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.data-table-stack-label {
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  flex-shrink: 0;
+}
+
+.data-table-stack-value {
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+/* ---------- DangerZone: real wash weight, not a border tint ---------- */
+
+.danger-zone {
+  background: var(--danger-wash);
+  border-color: var(--danger);
+}
+
+.danger-zone .settings-section-head h3 {
+  color: var(--danger);
+}
+
+@media (pointer: coarse) {
+  .settings-rail-item,
+  .settings-back-button {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+}
+
+/* ---------- Review surfaces: chips, outline, versions, triage, bulk ---------- */
+
+.banner-info {
+  background: var(--mdloop-wash);
+  color: var(--mdloop-ink);
+  border: 1px solid currentColor;
+  border-radius: var(--radius);
+  padding: 8px 14px;
+  margin-bottom: 16px;
+  font-size: 13px;
+}
+
+/* The chip row itself carries no sticky/background/border of its own — it's
+   always nested inside a header that already does that job: List's
+   `.rail-close-row` (sticky, shared with the close button) or Bubbles'
+   `.bubbles-chips-toolbar` (a plain non-scrolling toolbar). */
+.rail-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.rail-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--lane-strong);
+  background: transparent;
+  color: var(--ink-soft);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.rail-chip--on {
+  background: var(--mdloop-wash);
+  border-color: var(--mdloop);
+  color: var(--mdloop-ink);
+  font-weight: 600;
+}
+
+/* Counts live in their own badge, not appended straight into the label
+   text — keeps "Open 16" and plain chips like "Mine" the same visual
+   weight instead of the number text making counted chips look heavier
+   and vertically uneven next to the rest. */
+.rail-chip-count {
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: var(--lane);
+  color: var(--ink-soft);
+  font-size: 11px;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+}
+
+.rail-chip--on .rail-chip-count {
+  background: var(--mdloop);
+  color: var(--chalk-raised);
+}
+
+/* Sticky first row of the rail (both desktop and the mobile bottom sheet):
+   the filter chips plus, on mobile only, the sheet's close button — one
+   combined sticky header rather than two stacked ones fighting for the same
+   `top: 0`. Desktop just never shows `.rail-close` (display: none below), so
+   the row reads as chips alone there. */
+.rail-close-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: var(--space-2) 10px;
+  border-bottom: 1px solid var(--lane);
+  position: sticky;
+  top: 0;
+  background: var(--chalk-raised);
+  z-index: 2;
+}
+
+.rail-close {
+  display: none;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+/* Floating comments button: mobile-only entry to the drawer. */
+.rail-fab {
+  display: none;
+  position: fixed;
+  right: 16px;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  border-radius: 999px;
+  padding: 10px 16px;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.25);
+  z-index: 30;
+}
+
+.version-strip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  border-bottom: 1px solid var(--lane);
+  background: var(--chalk-raised);
+  overflow-x: auto;
+  font-size: 12px;
+}
+
+.version-chip {
+  border: 1px solid var(--lane-strong);
+  background: transparent;
+  color: var(--ink-soft);
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.version-chip--current {
+  border-color: var(--mdloop);
+  color: var(--mdloop-ink);
+}
+
+.version-chip--selected {
+  background: var(--mdloop-wash);
+  font-weight: 600;
+}
+
+/* Purged chips wrap a Badge (the pill look now comes from .badge) rather
+   than drawing their own — reset the border/padding .version-chip supplies
+   so the two pills don't nest, keep only the fade/strike/layout. */
+.version-chip--purged {
+  display: inline-flex;
+  align-items: center;
+  border: 0;
+  background: none;
+  padding: 0;
+  opacity: 0.45;
+  text-decoration: line-through;
+  cursor: default;
+}
+
+/* Spacing wrapper around the "via API key" Badge nested inside a chip
+   button — the badge supplies its own type size now, this just keeps it off
+   the "vN" text next to it. */
+.version-chip-via-key {
+  margin-left: 4px;
+}
+
+.version-strip-older {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.version-chip-older {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+/* `position: fixed` with JS-computed top/left (see version-strip.tsx) —
+   .version-strip scrolls horizontally, which makes its overflow-y compute
+   to `auto` too, so an absolutely-positioned panel would get clipped. */
+.version-strip-older-menu {
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  min-width: 160px;
+  max-height: 320px;
+  overflow-y: auto;
+  background: var(--chalk-raised);
+  border: 1px solid var(--lane);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
+  z-index: 50;
+}
+
+.version-strip-older-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: none;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.version-strip-older-item:hover {
+  background: var(--mdloop-wash);
+  color: var(--mdloop-ink);
+}
+
+.version-strip-older-item--selected {
+  background: var(--mdloop-wash);
+  color: var(--mdloop-ink);
+  font-weight: 600;
+}
+
+/* Same double-pill reset as .version-chip--purged above. */
+.version-strip-older-item--purged {
+  display: flex;
+  align-items: center;
+  border: 0;
+  background: none;
+  padding: 6px 12px;
+  opacity: 0.45;
+  text-decoration: line-through;
+  cursor: default;
+}
+
+.version-strip-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 8px;
+}
+
+/* Slide-in drawer, not a permanent column: the tab stays put at the left
+   edge (open or closed) as a small vertical-text handle; the panel itself
+   slides out from behind it, overlaying whatever's beneath rather than
+   reflowing the layout. */
+.outline-drawer {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 15;
+  display: flex;
+  pointer-events: none;
+}
+
+.outline-tab {
+  position: relative;
+  z-index: 2;
+  pointer-events: auto;
+  width: 28px;
+  border: 0;
+  border-right: 1px solid var(--lane);
+  background: var(--chalk-raised);
+  color: var(--ink-soft);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 0;
+}
+
+.outline-tab:hover {
+  color: var(--mdloop-ink);
+  background: var(--mdloop-wash);
+}
+
+.outline-tab-label {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.outline-panel {
+  position: relative;
+  z-index: 1;
+  /* Translated fully behind the tab while closed — its layout box still
+     spans that space, so pointer-events must go with it or it swallows
+     clicks meant for the tab sitting in front of it. */
+  pointer-events: none;
+  width: 240px;
+  transform: translateX(-100%);
+  transition: transform 0.2s ease;
+  overflow-y: auto;
+  padding: 10px 8px;
+  background: var(--chalk);
+  border-right: 1px solid var(--lane);
+  box-shadow: 4px 0 16px rgb(0 0 0 / 0.12);
+}
+
+.outline-drawer--open .outline-panel {
+  pointer-events: auto;
+  transform: translateX(0);
+}
+
+.outline-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.outline-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 13px;
+  padding: 4px 8px;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.outline-item:hover {
+  background: var(--mdloop-wash);
+  color: var(--mdloop-ink);
+}
+
+.outline-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.triage-panel {
+  background: var(--signal-wash);
+  color: var(--signal);
+  border: 1px solid currentColor;
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  font-size: 13px;
+}
+
+.triage-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.triage-panel ul {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+}
+
+.triage-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+}
+
+.triage-quote {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: 13px;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 50%;
+}
+
+.thread-reply-input-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 2px 0 var(--space-2);
+}
+
+.thread-reply-input-row input[type='text'] {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--lane-strong);
+  border-radius: var(--radius);
+  padding: 5px 8px;
+  font-size: 13px;
+}
+
+/* Floats above the list instead of mounting in the document flow, so
+   selecting rows never pushes the list down mid-selection. Centered over
+   the content column (sidebar width + half the remaining viewport), not
+   the full viewport — collapses to viewport-centered once the sidebar
+   itself hides (see the 720px breakpoint below). */
+.bulk-bar {
+  position: fixed;
+  left: calc(var(--sidebar-w) / 2 + 50vw);
+  transform: translateX(-50%);
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  z-index: 25;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: calc(100vw - 32px);
+  background: var(--mdloop-wash);
+  color: var(--mdloop-ink);
+  border: 1px solid var(--mdloop);
+  border-radius: var(--radius);
+  padding: var(--space-2) var(--space-3);
+  font-size: 13px;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.25);
+}
+
+@media (max-width: 720px) {
+  .bulk-bar {
+    left: 50%;
+  }
+}
+
+.doc-check {
+  margin-right: 8px;
+  accent-color: var(--mdloop);
+}
+
+/* Deliberately --chalk not --chalk-raised: this is header chrome (the desk),
+   not a sheet/card. Documented deviation from design-system.md's default
+   input background, recorded in the Forms section. Also used by
+   admin-org-list.tsx's .admin-org-search. */
+.topbar-search {
+  padding: 6px var(--space-3);
+  border-radius: 999px;
+  background: var(--chalk);
+}
+
+.load-more {
+  display: block;
+  margin: 16px auto;
+}
+
+/* Repo-sync nudge under the flat document list (Phase 20/29). Deliberately
+   quieter than .banner-info — it's an offer, not a status, and it sits below
+   the content it's talking about. */
+.cli-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 20px 0 0;
+  padding: 10px 12px;
+  border: 1px dashed var(--lane-strong);
+  border-radius: var(--radius);
+  color: var(--ink-soft);
+  font-size: 12.5px;
+}
+
+.cli-hint p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.cli-hint p + p {
+  margin-top: 6px;
+}
+
+.cli-hint code {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  background: var(--mdloop-wash);
+  border-radius: 3px;
+  padding: 1px 4px;
+}
+
+.cli-hint-command {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0;
+}
+
+.cli-hint-command code {
+  flex: 1;
+  padding: 4px 8px;
+  white-space: nowrap;
+  overflow-x: auto;
+}
+
+.cli-hint-copy {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 1px solid var(--lane-strong);
+  border-radius: var(--radius);
+  padding: 3px;
+  color: var(--ink-soft);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.cli-hint-copy:hover {
+  color: var(--mdloop-ink);
+  border-color: var(--mdloop-ink);
+}
+
+.cli-hint-link {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: var(--mdloop-ink);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* Persistent project-view top affordance (Phase 34.E) — subtler than the
+   bottom empty-state box above: no dashed border by default, just one line,
+   so it reads as a status/action, not a callout. Overrides the base
+   .cli-hint layout it's combined with (`cli-hint cli-hint--compact`). */
+.cli-hint--compact {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  margin: 0 0 16px;
+  padding: 0;
+  border: 0;
+}
+
+.cli-hint-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink-soft);
+  font-size: 12.5px;
+}
+
+.cli-hint-toggle {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+}
+
+.cli-hint-toggle:hover {
+  color: var(--mdloop-ink);
+}
+
+.cli-hint-details {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border: 1px dashed var(--lane-strong);
+  border-radius: var(--radius);
+  color: var(--ink-soft);
+  font-size: 12.5px;
+}
+
+.cli-hint-details p {
+  margin: 6px 0 0;
+  line-height: 1.5;
+}
+
+/* Quiet persistent confirmation once a project IS linked — replaces
+   .cli-hint--compact in the same header slot (Phase 34.E). */
+.cli-hint--linked {
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 16px;
+  padding: 4px 0;
+  border: 0;
+  color: var(--ink-soft);
+  font-size: 12.5px;
+}
+
+/* Mobile: the comment rail becomes a bottom-sheet drawer; the minimap
+   collapses to a thin edge strip. Comments stay fully usable. */
+@media (max-width: 899px) {
+  .viewer-body {
+    grid-template-columns: 1fr 10px;
+  }
+
+  /* Bubbles mode needs two real margins to work — narrow viewports stay on
+     List, same as the outline drawer already does below. */
+  .mode-toggle-inline {
+    display: none;
+  }
+
+  /* Plain `.outline-drawer` loses the specificity fight with `.viewer-body
+     .outline-drawer { display: contents; }` above (two classes beats one),
+     so this rule silently never applied — the drawer's `display: contents`
+     children (`.outline-tab`/`.outline-panel`, `min-width: 224px` each) kept
+     landing as unaccounted-for implicit grid columns even on narrow
+     viewports, widening `.viewer-body` past the visible width. Match the
+     specificity so this actually wins. */
+  .viewer-body .outline-drawer,
+  .bubbles-row .outline-drawer {
+    display: none;
+  }
+
+  .minimap {
+    display: block;
+    width: 10px;
+  }
+
+  .comment-rail {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top: auto;
+    height: 60vh; /* fallback */
+    height: 60dvh; /* mobile-safari dynamic toolbar */
+    background: var(--chalk-raised);
+    border-top: 1px solid var(--lane-strong);
+    border-radius: 12px 12px 0 0;
+    box-shadow: 0 -8px 32px rgb(0 0 0 / 0.25);
+    transform: translateY(100%);
+    transition: transform 160ms ease;
+    z-index: 20;
+  }
+
+  /* `.rail-scroll` is the sheet's last visible region now that the
+     shortcuts bar is gone — it owns the home-indicator clearance. */
+  .rail-scroll {
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .comment-rail {
+      transition: none;
+    }
+  }
+
+  .comment-rail--open {
+    transform: translateY(0);
+  }
+
+  .rail-close {
+    display: inline-block;
+  }
+
+  .rail-fab {
+    display: block;
+  }
+
+  /* `.document-header-right` (Review/Add comment/Copy feedback/Share/New
+     version) never had a mobile treatment — its default grid `auto` track
+     just takes its full intrinsic width (~480px of buttons), which at phone
+     widths doesn't just overflow its own row: unconstrained fixed-position
+     descendants elsewhere on the page (the comment rail, `.rail-fab`) pick up
+     that overflow's width as their containing block too, breaking every
+     `position: fixed` element in the viewer at once. `minmax(0, ...)` tracks
+     plus an `overflow-x: auto` scroller on the right cluster keep the row
+     itself scrollable in place of that page-wide overflow — same pattern
+     `.version-strip` already uses for its own row of chips. */
+  .document-header {
+    grid-template-columns: minmax(0, 1fr) minmax(0, auto);
+  }
+
+  .document-header-left {
+    min-width: 0;
+  }
+
+  .document-header-right {
+    max-width: 100%;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+  }
+
+  .version-strip-actions .btn {
+    padding: 2px 8px;
+  }
+
+  .app-header-search {
+    max-width: 140px;
+  }
+
+  /* Share and Sign-off (`.share-panel`/`.review-panel`) anchor inside
+     `.document-header-right` above, which this same media query just turned
+     into a scroll container (`overflow-x: auto`, and per CSS's overflow-x/
+     overflow-y coupling — see `.share-panel`'s own `overflow-x: hidden`
+     comment above — that forces `overflow-y` to compute to `auto` too).
+     `overflow: auto` clips ALL descendants to its box, including
+     absolutely-positioned ones whose containing block is inside it — so
+     both popovers, still positioned `absolute` relative to their in-row
+     anchor, were rendering fully clipped away: real DOM node, real
+     coordinates, `display: flex`, `opacity: 1`, but invisible and
+     unclickable (confirmed via `elementFromPoint`, which hit the page
+     behind them instead). Fixed the same way `.comment-rail` already
+     handles the identical "popover anchored inside something that scrolls"
+     problem at this breakpoint: `position: fixed` escapes the ancestor's
+     overflow clipping entirely, and a viewport-edge-docked bottom sheet
+     sidesteps the anchor's on-row position (which, unlike a permanent
+     sidebar trigger, can be scrolled anywhere within the row) rather than
+     trying to recompute a below-the-trigger offset that would just be
+     wrong half the time. */
+  .share-panel,
+  .review-panel {
+    position: fixed;
+    top: auto;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: auto;
+    max-width: none;
+    max-height: 70vh;
+    max-height: 70dvh;
+    border-radius: 12px 12px 0 0;
+    box-shadow: 0 -8px 32px rgb(0 0 0 / 0.25);
+  }
+}
+
+/* Touch devices: 6px ticks are impossible to hit — grow the hit area
+   without growing the visible mark (WCAG 44px target via padding hack). */
+@media (pointer: coarse) {
+  .minimap-tick {
+    height: 14px;
+    border-top: 4px solid transparent;
+    border-bottom: 4px solid transparent;
+    background-clip: padding-box;
+  }
+}
+
+/* Comment upvote: compact ghost chip on the thread's quote/badge row.
+   Active (the signed-in user upvoted) fills with the brand wash + ink. */
+.thread-upvote {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px;
+  font: inherit;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--ink-soft);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.thread-upvote:hover {
+  color: var(--mdloop-ink);
+}
+
+.thread-upvote--on {
+  color: var(--mdloop-ink);
+}
+
+.thread-upvote-count {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Guest chrome (Phase 18): persistent banner above the viewer. */
+.guest-banner {
+  margin: 0;
+  border-radius: 0;
+  border-left: 0;
+  border-right: 0;
+  text-align: center;
+}
+
+.share-guest {
+  border-top: 1px solid var(--lane);
+  margin-top: 12px;
+  padding-top: 4px;
+}
+
+.share-guest input[type='email'] {
+  flex: 1 1 100%;
+}
+
+.share-guest input[type='number'] {
+  width: 64px;
+}
+
+/* Wraps the naked number input so the unit reads inline — "7 days", not a
+   bare "7" with no indication of what it counts. */
+.share-days-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ---------- Public Docs Hub (ADR 0004 / Phase 22) ---------- */
+
+/* Locks the subtree to the light palette regardless of the visitor's OS
+   preference or the app's [data-theme] toggle — the hub is a public
+   storefront with its own fixed identity, not part of the authenticated
+   app chrome. Re-declares every token the dark overrides touch (see the
+   :root block and [data-theme='dark'] above) so nothing leaks through via
+   custom-property inheritance. */
+.hub-light {
+  --chalk: #eceae3;
+  --chalk-raised: #fbfaf7;
+  --ink: #23211b;
+  --ink-soft: #6b675d;
+  --lane: #dcd9d0;
+  --lane-strong: #c9c5b9;
+  --mdloop: #2456e6;
+  --mdloop-ink: #1a41b3;
+  --mdloop-wash: #dbe4fa;
+  --on-mdloop: #ffffff;
+  --signal: #a04d08;
+  --signal-wash: #f5e8d7;
+  --resolved: #15803d;
+  --danger: #b91c1c;
+  --danger-wash: #fdecec;
+  --insert-wash: #e3f2e6;
+  --code-comment: #948f83;
+  --code-keyword: #2456e6;
+  --code-string: #15803d;
+  --code-number: #b45309;
+  --code-function: #1a41b3;
+  --code-attr: #6b675d;
+
+  min-height: 100%;
+  background: var(--chalk);
+  color: var(--ink);
+}
+
+.hub {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 64px 24px 80px;
+}
+
+.hub-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.hub-title {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 32px;
+  letter-spacing: -0.02em;
+  margin: 0 0 8px;
+}
+
+.hub-tagline {
+  color: var(--ink-soft);
+  margin: 0 0 24px;
+}
+
+.hub-search {
+  width: 100%;
+  max-width: 420px;
+  padding: 10px 14px;
+  font-size: 14px;
+}
+
+.hub-empty {
+  text-align: center;
+  color: var(--ink-soft);
+  padding: 32px 0;
+}
+
+.hub-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: var(--lane);
+  border: 1px solid var(--lane);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.hub-list-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: var(--chalk-raised);
+  color: var(--ink);
+  padding: 14px 18px;
+}
+
+.hub-list-item:hover {
+  background: var(--mdloop-wash);
+}
+
+.hub-list-title {
+  font-weight: 600;
+}
+
+.hub-list-date {
+  flex-shrink: 0;
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+
+.hub-list-snippet {
+  flex-basis: 100%;
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+
+.hub-list-snippet mark {
+  background: var(--signal-wash);
+  color: var(--ink);
+}
+
+.hub-doc {
+  max-width: 800px;
+}
+
+.hub-back-link {
+  margin-bottom: 16px;
+}
+
+.hub-doc-title {
+  font-family: var(--font-display);
+  margin-top: 0;
+}
+
+/* ---------- Operator admin console (Phase 26.E) ---------- */
+
+/* Slim, distinct chrome — deliberately not `.shell`/`.app-header` reused
+   verbatim, so this never reads as an impersonation of the customer app.
+   The amber stripe is the persistent "you are not in customer mode" cue.
+   Rendered as SettingsLayout's `header` slot (Phase 39.A) — `.settings-shell`
+   supplies the height:100%/flex-column wrapper this used to own itself. */
+.admin-accent-stripe {
+  height: 3px;
+  background: var(--signal);
+  flex-shrink: 0;
+}
+
+.admin-topbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 9px 28px;
+  border-bottom: 1px solid var(--lane);
+  flex-shrink: 0;
+}
+
+.admin-topbar-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  background: none;
+  padding: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+.admin-topbar-label::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--signal);
+}
+
+.admin-topbar-sticky {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+  font-family: var(--font-mono);
+}
+
+/* Same top-accent cue on the pre-session screen, so the trust boundary
+   reads before the operator even signs in. */
+.admin-login .login-card {
+  border-top: 3px solid var(--signal);
+}
+
+.admin-org-search {
+  max-width: 340px;
+  margin-bottom: 16px;
+}
+
+.admin-org-search input {
+  width: 100%;
+}
+
+/* Directory + Dashboard (Phase 39.E) tier/status filter row and the
+   clickable org name that replaced `.doc-title` — that class is a filename
+   convention from the document list, wrong here. */
+.admin-org-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.admin-org-filter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.admin-org-filter-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-soft);
+}
+
+.admin-org-name {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+}
+
+.admin-org-name:hover,
+.admin-org-name:focus-visible {
+  text-decoration: underline;
+}
+
+.admin-dashboard .help-text {
+  margin-bottom: 16px;
+}
+
+.admin-tier-badge {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  border-radius: 10px;
+  padding: 1px 8px;
+  white-space: nowrap;
+  color: var(--ink-soft);
+  background: var(--lane);
+}
+
+.admin-tier-badge--enterprise {
+  color: var(--mdloop-ink);
+  background: var(--mdloop-wash);
+}
+
+/* ---------- Project tree (Phase 29) ----------
+   Repo-path tree for a project lane's documents — a review-attention map,
+   not a file browser. Every color/font token here is one already declared
+   at :root (and re-declared under [data-theme='dark']), so this block needs
+   no dark-mode overrides of its own. */
+
+.project-tree {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tree-filter-input {
+  width: 100%;
+  max-width: 320px;
+}
+
+.tree-root,
+.tree-children {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Nesting reads through a hairline guide per level instead of file-type
+   icons — each level's own .tree-children re-applies the border, so depth
+   stacks as parallel vertical lines the way it does in a code editor's
+   file tree. */
+.tree-children {
+  margin: 2px 0 2px 15px;
+  padding-left: 13px;
+  border-left: 1px solid var(--lane);
+}
+
+.tree-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  padding: 6px 8px;
+  cursor: pointer;
+  color: var(--ink);
+}
+
+.tree-row:hover {
+  background: var(--mdloop-wash);
+}
+
+.tree-mdloop {
+  flex: none;
+  color: var(--ink-soft);
+  transition: transform 120ms;
+}
+
+.tree-mdloop--collapsed {
+  transform: rotate(-90deg);
+}
+
+/* Folder segments sit in the quiet/utility face — same font-mono + ink-soft
+   pairing as .doc-meta/.doc-group-header — so structure reads as chrome,
+   not content. */
+.tree-folder-name {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Document titles reuse .doc-title's exact treatment from document-list.tsx
+   (font-mono, weight 500, full-ink) so a title reads the same whether it's
+   in the flat list or the tree. */
+.tree-doc-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.tree-row--doc:hover .tree-doc-title {
+  text-decoration: underline;
+}
+
+.tree-empty {
+  padding: 4px 8px;
+}
+
+/* ---------- Billing (Phase 38.B) ---------- */
+
+/* Same "attention, not error" language as .review-chip--changes_requested:
+   ink on --signal-wash with a --signal border — past-due/canceling states
+   are things a human should look at, not destruction (that's --danger). */
+.billing-status-attention {
+  color: var(--ink);
+  background: var(--signal-wash);
+  border: 1px solid var(--signal);
+  border-radius: var(--radius);
+  padding: 8px 14px;
+  margin-bottom: 12px;
+  font-size: 13px;
+}
+
+/* Embedded Stripe Checkout/Elements size themselves — no fixed height here,
+   just the same card chassis every bordered surface in this file uses. */
+.billing-checkout-frame {
+  border: 1px solid var(--lane);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-top: 12px;
+  padding: 12px;
+}
+
+.billing-plan-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.billing-payment-summary {
+  font-family: var(--font-mono);
+  font-size: 13px;
+}

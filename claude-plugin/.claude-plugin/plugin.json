@@ -1,0 +1,21 @@
+{
+  "name": "mdloop-sync",
+  "description": "Closes both halves of the mdloop review loop for a repo's markdown specs, PRDs, plans and ADRs. The mdloop-sync skill (plus an opt-in Stop hook and a link command) pushes artifacts into mdloop with a change note a human reviewer can actually read; the mdloop-review skill pulls the resulting feedback back over the mdloop MCP tools — comments, suggested edits, sign-off — and turns it into a revision.",
+  "version": "0.3.0",
+  "author": {
+    "name": "mdloop"
+  },
+  "keywords": [
+    "mdloop",
+    "sync",
+    "specs",
+    "markdown",
+    "review",
+    "mdloop-review",
+    "feedback",
+    "comments",
+    "suggestions",
+    "sign-off",
+    "mcp"
+  ]
+}
