@@ -242,47 +242,59 @@ describe('serve', () => {
       ).toBe(true);
     });
 
-    it('times out waiting for the supervisor to report running', async () => {
-      vi.useFakeTimers();
-      // `ensureDataDir` faked here (unlike this file's usual real one) so
-      // nothing between `vi.useFakeTimers()` and the poll loop below needs a
-      // real fs round trip to resolve — `runServeStart`'s only other real-fs
-      // step first (opening the log file) is a single fast open on an
-      // already-real `dataDir`, not a multi-syscall `mkdir -p`, so it does
-      // not carry the same risk of losing a race against the fake clock's
-      // very first advance.
-      //
-      // `readInstanceRecord` is *also* faked, unlike this file's usual real
-      // one — it's called every `POLL_INTERVAL_MS` inside the loop this
-      // test drives to its full timeout, ~200 real reads of a file that
-      // never gets written in this test (the fake `spawnSupervisor` never
-      // marks anything running, so the real read would always resolve
-      // `undefined` anyway). Before this fake was added, the real reads
-      // reproducibly blew through this test's real-wall-clock budget at
-      // both 30s and 60s on a GitHub Actions runner, never locally — see
-      // `ServeDeps.readInstanceRecord`'s doc comment in serve.ts. Even with
-      // the fake, a loaded runner has since tipped over a 30s budget once
-      // with no code change; widened to 45s for real margin.
-      const { deps, killCalls } = testDeps({
-        ensureDataDir: () =>
-          Promise.resolve({
-            root: dataDir,
-            pgdata: path.join(dataDir, 'pgdata'),
-            blobs: path.join(dataDir, 'blobs'),
-          }),
-        readInstanceRecord: () => Promise.resolve(undefined),
-      });
-      const { io, err } = collectIo();
+    it(
+      'times out waiting for the supervisor to report running',
+      { timeout: 60_000, retry: 2 },
+      async () => {
+        vi.useFakeTimers();
+        // `ensureDataDir` faked here (unlike this file's usual real one) so
+        // nothing between `vi.useFakeTimers()` and the poll loop below needs a
+        // real fs round trip to resolve — `runServeStart`'s only other real-fs
+        // step first (opening the log file) is a single fast open on an
+        // already-real `dataDir`, not a multi-syscall `mkdir -p`, so it does
+        // not carry the same risk of losing a race against the fake clock's
+        // very first advance.
+        //
+        // `readInstanceRecord` is *also* faked, unlike this file's usual real
+        // one — it's called every `POLL_INTERVAL_MS` inside the loop this
+        // test drives to its full timeout, ~200 real reads of a file that
+        // never gets written in this test (the fake `spawnSupervisor` never
+        // marks anything running, so the real read would always resolve
+        // `undefined` anyway). Before this fake was added, the real reads
+        // reproducibly blew through this test's real-wall-clock budget at
+        // both 30s and 60s on a GitHub Actions runner, never locally — see
+        // `ServeDeps.readInstanceRecord`'s doc comment in serve.ts. Even with
+        // the fake, this test's real cost still scales with the *number* of
+        // `advanceFakeTimers` steps (410, at its 100ms step size) rather than
+        // real I/O now — each step is a real `await`, and per-step scheduling
+        // overhead on a loaded runner compounds across all 410 of them. That's
+        // observed to occasionally exceed even a 45s budget outright, not just
+        // tip over it — this is CI scheduling variance in a real cost that
+        // scales with step count, not a hang, so retry + a taller ceiling
+        // rather than another timeout bump alone (the step size itself is
+        // deliberately NOT larger — see `advanceFakeTimers`'s own doc comment
+        // for why a previous attempt at that broke this test locally too).
+        const { deps, killCalls } = testDeps({
+          ensureDataDir: () =>
+            Promise.resolve({
+              root: dataDir,
+              pgdata: path.join(dataDir, 'pgdata'),
+              blobs: path.join(dataDir, 'blobs'),
+            }),
+          readInstanceRecord: () => Promise.resolve(undefined),
+        });
+        const { io, err } = collectIo();
 
-      const startPromise = runServe('start', {}, io, deps);
-      await advanceFakeTimers(41_000);
-      const code = await startPromise;
+        const startPromise = runServe('start', {}, io, deps);
+        await advanceFakeTimers(41_000);
+        const code = await startPromise;
 
-      expect(code).toBe(1);
-      expect(err.some((l) => l.includes('Timed out waiting'))).toBe(true);
-      expect(killCalls.some((c) => c.signal === 'SIGTERM')).toBe(true);
-      expect(await readInstanceRecord(dataDir)).toBeUndefined();
-    }, 45_000);
+        expect(code).toBe(1);
+        expect(err.some((l) => l.includes('Timed out waiting'))).toBe(true);
+        expect(killCalls.some((c) => c.signal === 'SIGTERM')).toBe(true);
+        expect(await readInstanceRecord(dataDir)).toBeUndefined();
+      },
+    );
 
     it('the supervisor dying before it reports running fails fast, not after the full timeout', async () => {
       // Never added to `aliveSet` (unlike the default fake's spawnSupervisor
