@@ -39,7 +39,7 @@ jobs:
       TEST_AWS_REGION: ${{ vars.NIGHTLY_S3_CONTRACT_REGION }}
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
           node-version: 22
