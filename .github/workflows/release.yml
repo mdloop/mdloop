@@ -71,12 +71,9 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-          # Without this, `NODE_AUTH_TOKEN` in the publish step's env is
-          # inert — `registry-url` is what makes setup-node write the
-          # .npmrc that actually reads it. Missing this produced a real
-          # ENEEDAUTH failure on the first real publish attempt: `npm
-          # publish` built and printed the full tarball successfully, then
-          # failed at the last line with no auth configured at all.
+          # `registry-url` is what points the publish step at npm at all —
+          # without it, npm has no registry configured, trusted-publishing
+          # OIDC included.
           registry-url: 'https://registry.npmjs.org'
       - run: pnpm install --frozen-lockfile
 
@@ -109,10 +106,20 @@ jobs:
       # this repo is private (see docs/RISKS.md's publish-sequencing note),
       # on automatically the moment it's flipped public, with no workflow
       # change needed.
+      #
+      # Auth is npm Trusted Publishing (OIDC) — no NPM_TOKEN secret at all.
+      # `permissions.id-token: write` (top of this file) is what makes the
+      # ACTIONS_ID_TOKEN_REQUEST_* env vars available to this step; npm's
+      # CLI does the OIDC exchange itself once a trusted publisher is
+      # configured on the package (npmjs.com → package → Settings → Trusted
+      # Publisher → GitHub Actions → this repo/workflow filename/branch).
+      # Deliberately no long-lived token to leak, rotate, or lose when the
+      # repo is ever deleted and recreated (a secret does not survive that;
+      # this config lives on the npm side and does). Needs npm CLI >=11.5.1;
+      # upgraded explicitly rather than trusting whatever Node 22 bundles.
       - name: Publish to npm
         working-directory: packages/vorlyn
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           # A tag push is always the real release path (see the trigger
           # comment above) — `inputs.dist_tag` only exists for
           # workflow_dispatch, so without this the `||` fallback would
@@ -121,6 +128,7 @@ jobs:
           # to beta for a plain re-run with no input.
           DIST_TAG: ${{ github.event_name == 'push' && 'latest' || inputs.dist_tag || 'beta' }}
         run: |
+          npm install -g npm@latest
           if [ "${{ !github.event.repository.private }}" = "true" ]; then
             npm publish --tag "$DIST_TAG" --provenance
           else
