@@ -429,30 +429,40 @@ describe('serve', () => {
       expect(await readInstanceRecord(dataDir)).toBeUndefined();
     });
 
-    it('record present, owner "serve", does not die after SIGTERM: escalates to SIGKILL on the negative pid, then "Stopped."', async () => {
-      vi.useFakeTimers();
-      const killCalls: { pid: number; signal: NodeJS.Signals }[] = [];
-      const aliveSet = new Set<number>([7777]);
-      const { deps } = testDeps({
-        isAlive: (pid) => aliveSet.has(pid),
-        kill: (pid, signal) => {
-          killCalls.push({ pid, signal });
-          // SIGTERM deliberately does nothing here — only SIGKILL clears it.
-          if (signal === 'SIGKILL') aliveSet.delete(pid >= 0 ? pid : -pid);
-        },
-      });
-      await acquireInstanceRecord(dataDir, { owner: 'serve', pid: 7777 });
-      const { io, out } = collectIo();
+    it(
+      'record present, owner "serve", does not die after SIGTERM: escalates to SIGKILL on the negative pid, then "Stopped."',
+      { timeout: 60_000, retry: 2 },
+      async () => {
+        vi.useFakeTimers();
+        // Same `advanceFakeTimers`-step-count cost as the launcher timeout
+        // test above (160 steps here, at 16s/100ms) — no real I/O in this
+        // loop at all (`isAlive` is synchronous/faked), yet this timed out
+        // on CI too, confirming the cost is the step count itself, not
+        // per-test I/O. See the launcher test's comment for the full
+        // explanation; same retry + taller-ceiling treatment here.
+        const killCalls: { pid: number; signal: NodeJS.Signals }[] = [];
+        const aliveSet = new Set<number>([7777]);
+        const { deps } = testDeps({
+          isAlive: (pid) => aliveSet.has(pid),
+          kill: (pid, signal) => {
+            killCalls.push({ pid, signal });
+            // SIGTERM deliberately does nothing here — only SIGKILL clears it.
+            if (signal === 'SIGKILL') aliveSet.delete(pid >= 0 ? pid : -pid);
+          },
+        });
+        await acquireInstanceRecord(dataDir, { owner: 'serve', pid: 7777 });
+        const { io, out } = collectIo();
 
-      const stopPromise = runServe('stop', {}, io, deps);
-      await advanceFakeTimers(16_000);
-      const code = await stopPromise;
+        const stopPromise = runServe('stop', {}, io, deps);
+        await advanceFakeTimers(16_000);
+        const code = await stopPromise;
 
-      expect(code).toBe(0);
-      expect(killCalls[0]).toEqual({ pid: 7777, signal: 'SIGTERM' });
-      expect(killCalls.some((c) => c.pid === -7777 && c.signal === 'SIGKILL')).toBe(true);
-      expect(out).toContain('Stopped.');
-    }, 30_000);
+        expect(code).toBe(0);
+        expect(killCalls[0]).toEqual({ pid: 7777, signal: 'SIGTERM' });
+        expect(killCalls.some((c) => c.pid === -7777 && c.signal === 'SIGKILL')).toBe(true);
+        expect(out).toContain('Stopped.');
+      },
+    );
 
     it('stopping twice in a row is idempotent', async () => {
       const { deps, aliveSet } = testDeps();
