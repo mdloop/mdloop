@@ -59,7 +59,7 @@ jobs:
       TEST_DATABASE_URL: postgres://postgres@localhost:5432/postgres
       TEST_REDIS_URL: redis://localhost:6379
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v7
         with:
@@ -112,7 +112,7 @@ jobs:
     env:
       TEST_DATABASE_URL: postgres://postgres@localhost:5432/postgres
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v7
         with:
@@ -131,7 +131,7 @@ jobs:
     # parallel to each other.
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # gitleaks-action v2 scans whatever git history the checkout
           # exposes, so a full clone is what makes the `push` scan a genuine
@@ -185,7 +185,7 @@ jobs:
     env:
       TEST_DATABASE_URL: postgres://postgres@localhost:5432/postgres
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v7
         with:
@@ -235,7 +235,7 @@ jobs:
       # includes it.
       actions: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v7
         with:

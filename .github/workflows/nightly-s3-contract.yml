@@ -38,7 +38,7 @@ jobs:
       TEST_S3_BUCKET: ${{ vars.NIGHTLY_S3_CONTRACT_BUCKET }}
       TEST_AWS_REGION: ${{ vars.NIGHTLY_S3_CONTRACT_REGION }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v7
         with:
