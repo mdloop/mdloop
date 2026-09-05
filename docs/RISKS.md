@@ -153,7 +153,10 @@ correcting §4's wording via ADR (§8.5) to describe the proxy path instead.
 **Test flakiness is usually environmental.** Integration tests create an ephemeral database per run
 and leak some on failure; at high machine load, unrelated files start failing. Check `uptime` and
 count leftover `mdloop_test_%` databases before investigating a scattered failure as a real
-regression.
+regression. A named repeat offender: `packages/cli/src/serve.test.ts`'s "does not die after
+SIGTERM: escalates to SIGKILL" case hit CI's 60s test timeout twice in one afternoon of
+back-to-back CI runs (real process spawn + real signal delays under runner contention), passing
+clean every time in isolation locally. Re-run the job before treating a failure here as real.
 
 **Four dependencies are deliberately held back (`.github/dependabot.yml`'s `ignore` list).** Each
 blocks on a concrete upstream fact, not on caution alone — revisit when the fact changes, not on a
