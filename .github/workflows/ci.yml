@@ -150,7 +150,7 @@ jobs:
           # to read one. No job in this file had ever executed. Keep the
           # literal.
           fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v2
+      - uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Only enforced for organization-owned repos (free at gitleaks.io);
