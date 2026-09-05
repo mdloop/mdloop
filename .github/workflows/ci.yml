@@ -4,6 +4,12 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Required so the ruleset's merge queue actually runs these checks against
+  # the queue's temporary merge commit — without this trigger, a queued PR
+  # waits forever for required checks that never start. See secret-scan's
+  # merge_group handling below: this event carries no pull_request context,
+  # so the PR-diff-only scan path doesn't apply here.
+  merge_group:
 
 # Least-privilege default; jobs that need more (CodeQL's SARIF upload) grant
 # it themselves, at the job level, not here.
@@ -165,8 +171,12 @@ jobs:
             "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
           tar -xzf gitleaks.tar.gz gitleaks
           sudo mv gitleaks /usr/local/bin/gitleaks
-      - name: Scan (push — full history)
-        if: github.event_name == 'push'
+      # merge_group carries no pull_request context (no github.base_ref to
+      # diff against), so it takes the full-history path alongside push —
+      # a superset of a diff scan, never a narrower one, so this can't miss
+      # anything a diff scan would have caught.
+      - name: Scan (push / merge_group — full history)
+        if: github.event_name == 'push' || github.event_name == 'merge_group'
         run: gitleaks detect --source . --config .gitleaks.toml --redact -v
       - name: Scan (pull_request — PR diff only)
         if: github.event_name == 'pull_request'
