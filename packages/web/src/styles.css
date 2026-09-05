@@ -3727,8 +3727,8 @@ mark.anchor-mark--selected.anchor-mark--more {
 }
 
 /* ---------- Badge: tone-based status pill ----------
-   Generalizes .invite-status--*/
-.admin-tier-badge. */ .badge {
+   Generalizes .invite-status--* and .admin-tier-badge. */
+.badge {
   display: inline-block;
   font-family: var(--font-mono);
   font-size: 11px;
