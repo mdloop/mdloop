@@ -7,7 +7,7 @@ identical from the outside, and most of what is not here is not here on purpose.
 Companion to `docs/RISKS.md` (what could bite) and `CONSTITUTION.md` §7 (the boundary rule that
 decides what belongs here at all).
 
-Last reviewed: 2026-08-28.
+Last reviewed: 2026-09-04.
 
 ## Shape
 
@@ -41,7 +41,7 @@ Nine packages, all core. `shared` (DTOs) → `domain` (pure logic, zero framewor
 - **23 Gherkin feature files** in `features/`, covering the money paths CONSTITUTION §3 requires:
   tenant isolation, quota, retention, permissions, sharing, guest sharing, rate-limit parity,
   redaction, comment search, agent publish→review.
-- **12 ADRs** in `docs/adr/` (numbers are stable identifiers, not a dense sequence — retired ADRs
+- **13 ADRs** in `docs/adr/` (numbers are stable identifiers, not a dense sequence — retired ADRs
   are removed, not renumbered).
 
 ## Verified, with real coverage floors
