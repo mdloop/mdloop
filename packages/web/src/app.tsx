@@ -159,8 +159,7 @@ export function App(): JSX.Element {
       .then((me) => {
         setSession({ state: 'signed-in', me });
       })
-      .catch((e: unknown) => {
-        void e;
+      .catch(() => {
         setSession({ state: 'anonymous' });
       });
   }, []);

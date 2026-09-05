@@ -133,8 +133,7 @@ function MermaidBlock({
           el.classList.remove('selected-part');
         });
         anchor.el.classList.add('selected-part');
-        const { el, ...dto } = anchor;
-        void el;
+        const { el: _el, ...dto } = anchor;
         onSelect(dto);
       }}
     />
