@@ -7,7 +7,7 @@ identical from the outside, and most of what is not here is not here on purpose.
 Companion to `docs/RISKS.md` (what could bite) and `CONSTITUTION.md` §7 (the boundary rule that
 decides what belongs here at all).
 
-Last reviewed: 2026-09-04.
+Last reviewed: 2026-09-05.
 
 ## Shape
 
@@ -43,6 +43,10 @@ Nine packages, all core. `shared` (DTOs) → `domain` (pure logic, zero framewor
   redaction, comment search, agent publish→review.
 - **13 ADRs** in `docs/adr/` (numbers are stable identifiers, not a dense sequence — retired ADRs
   are removed, not renumbered).
+- **The marketing site (`mdloop.dev`) lives in its own repo**, `github.com/mdloop/mdloop.dev` — a
+  dependency-free static page (Cloudflare Pages, deploys on push to its own `main`), deliberately
+  not in this repo per CONSTITUTION §7's boundary test: a landing page isn't a concept the core
+  needs, and keeping it separate means a copy edit doesn't wait on this repo's five-job CI gate.
 
 ## Verified, with real coverage floors
 
@@ -66,6 +70,14 @@ gate bites, not so it passes. Ratchet them up as coverage improves; re-measure w
 `web`, `cli`, `jobs` and `shared` carry no floor. That is an open question rather than a claim of
 quality: `web` leans on Playwright, `cli`/`jobs` are thin process wiring, and no convention has been
 settled for how much of them is meaningfully unit-testable. Tracked in `docs/RISKS.md`.
+
+**`main` is protected by a repository ruleset with no bypass actors** (`current_user_can_bypass:
+"never"`, including for org owners) — a PR and five green required checks (`verify`, `e2e`,
+`secret-scan`, `constitution`, `codeql`) before merge, no force-push, no deletion, branch must be
+up to date with `main` before merging. `scripts/dev/verify-branch-protection.sh` re-proves this by
+actually attempting a direct push, a force-push, and a premature merge against the real repo (all
+expected to fail) plus a real PR merge once checks are green (expected to succeed) — run it after
+any ruleset change rather than trusting the API response at face value.
 
 ## Deliberately absent
 
