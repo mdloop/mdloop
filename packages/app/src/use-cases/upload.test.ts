@@ -450,10 +450,9 @@ describe('uploadNewVersion', () => {
   });
 
   it('forbids non-owner members and allows org admins', async () => {
-    const { org, owner, uow, storage, documentId } = await withDocument();
+    const { org, uow, storage, documentId } = await withDocument();
     const stranger: Actor = { ctx: { orgId: org.id, userId: 'user-b' as UserId }, role: 'member' };
     const admin: Actor = { ctx: { orgId: org.id, userId: 'user-c' as UserId }, role: 'admin' };
-    void owner;
     const denied = await uploadNewVersion(uow, storage, stranger, {
       documentId,
       content: bytes('v2'),

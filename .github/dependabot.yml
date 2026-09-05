@@ -50,6 +50,16 @@ updates:
       # its own tooling. Unignore once ts-morph supports TS 7.
       - dependency-name: 'typescript'
         update-types: ['version-update:semver-major']
+      # @electric-sql/pglite 0.5.5->0.5.8 + pglite-socket 0.2.8->0.2.11 (a
+      # patch/minor bump, otherwise in-group) made `mdloop open`'s SIGINT
+      # shutdown exit non-zero ~50% of the time — reproduced only through
+      # the real packed-tarball smoke test (pnpm verify:release), never
+      # `pnpm test`, matching this pair's known history of drift that only
+      # shows up under a real npm install. Re-attempt once a future release
+      # of either package is confirmed (via verify:release, several runs)
+      # not to regress this; the two must keep moving together either way.
+      - dependency-name: '@electric-sql/pglite'
+      - dependency-name: '@electric-sql/pglite-socket'
     open-pull-requests-limit: 10
 
   # Keep the CI workflow's own actions (checkout, setup-node, codeql-action,

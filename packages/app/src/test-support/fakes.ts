@@ -1325,7 +1325,6 @@ export class FakeShareGrantRepository implements ShareGrantRepository {
       revokedAt: null,
     };
     this.grants.set(grant.id, grant);
-    void this.world;
     return Promise.resolve(grant);
   }
 
@@ -1533,13 +1532,11 @@ export class FakeAnchorResolutionRepository implements AnchorResolutionRepositor
   /** Rows the next pruneStale reports deleted — the SQL is proven in Pg tests. */
   pruneReturns = 0;
 
-  forVersion(ctx: TenantContext, versionId: VersionId): Promise<AnchorResolution[]> {
-    void ctx;
+  forVersion(_ctx: TenantContext, versionId: VersionId): Promise<AnchorResolution[]> {
     return Promise.resolve([...this.rows.values()].filter((r) => r.versionId === versionId));
   }
 
-  upsert(ctx: TenantContext, resolution: AnchorResolution): Promise<void> {
-    void ctx;
+  upsert(_ctx: TenantContext, resolution: AnchorResolution): Promise<void> {
     this.upserts += 1;
     this.rows.set(`${resolution.commentId}:${resolution.versionId}`, resolution);
     return Promise.resolve();
