@@ -19,8 +19,8 @@ importers:
         specifier: ^7.0.0
         version: 7.0.0(vitest@3.2.7(@types/debug@4.1.13)(@types/node@22.20.1)(jsdom@29.1.1)(lightningcss@1.33.0)(yaml@2.9.0))
       '@eslint/js':
-        specifier: ^9.30.0
-        version: 9.39.4
+        specifier: ^9.39.5
+        version: 9.39.5
       '@mdloop/api':
         specifier: workspace:*
         version: link:packages/api
@@ -1086,6 +1086,10 @@ packages:
 
   '@eslint/js@9.39.4':
     resolution: {integrity: sha512-nE7DEIchvtiFTwBw4Lfbu59PG+kCofhjsKaCWzxTpt4lfRjRMqG6uMBzKXuEcyXhOHoUp9riAm7/aWYGhXZ9cw==}
+    engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+
+  '@eslint/js@9.39.5':
+    resolution: {integrity: sha512-QywQuszQh77pIXCsq998c8hbhSTI/azTty1Z6N53dmAudKHhy573j3yvRLsX2BSp8YpLtoCEG8E9DJe+8zUh4A==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
 
   '@eslint/object-schema@2.1.7':
@@ -4810,6 +4814,8 @@ snapshots:
       - supports-color
 
   '@eslint/js@9.39.4': {}
+
+  '@eslint/js@9.39.5': {}
 
   '@eslint/object-schema@2.1.7': {}
 
