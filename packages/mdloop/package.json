@@ -49,8 +49,8 @@
     "prepublishOnly": "node ../../scripts/release/assert-packed.mjs"
   },
   "dependencies": {
-    "@electric-sql/pglite": "0.5.8",
-    "@electric-sql/pglite-socket": "0.2.11",
+    "@electric-sql/pglite": "0.5.5",
+    "@electric-sql/pglite-socket": "0.2.8",
     "@fastify/cookie": "^11.1.2",
     "@fastify/rate-limit": "^11.2.0",
     "@fastify/static": "^10.1.3",

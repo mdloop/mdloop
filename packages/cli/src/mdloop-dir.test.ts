@@ -79,7 +79,12 @@ describe('.mdloop/.gitignore', () => {
       async (f: string) =>
         writeManifest(f, { endpoint: 'https://x/mcp', projectId: 'p', files: {} }),
     ],
-    ['acquireLock', async (f: string) => void (await acquireLock(f))],
+    [
+      'acquireLock',
+      async (f: string) => {
+        await acquireLock(f);
+      },
+    ],
   ])('%s alone is enough to create it', async (_name, write) => {
     await write(folder);
     expect(await ignoreLines(folder)).toContain('credentials');

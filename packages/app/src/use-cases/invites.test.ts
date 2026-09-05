@@ -47,7 +47,7 @@ describe('sendInvite', () => {
   });
 
   it('sends an invite, hashes the token, and emails it once', async () => {
-    const { orgs, invites, email, admin, org } = setup();
+    const { orgs, invites, email, admin } = setup();
     const r = await sendInvite(orgs, invites, email, admin, {
       email: 'new@x.test',
       role: 'member',
@@ -60,7 +60,6 @@ describe('sendInvite', () => {
     expect(email.invitesSent).toHaveLength(1);
     expect(email.invitesSent[0]?.to).toBe('new@x.test');
     expect(email.invitesSent[0]?.acceptUrl).toContain(encodeURIComponent(r.value.token));
-    void org;
   });
 
   it('still returns the invite and token when email delivery fails (best-effort send)', async () => {

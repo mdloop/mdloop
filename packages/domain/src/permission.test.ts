@@ -58,22 +58,18 @@ describe('permission lattice', () => {
 
   it('neither share nor edit is ever grantable to an external guest (compile-time cap)', () => {
     // @ts-expect-error -- share must never be assignable to GuestGrantablePermission
-    const illegalShare: GuestGrantablePermission = 'share';
-    void illegalShare;
+    const _illegalShare: GuestGrantablePermission = 'share';
     // @ts-expect-error -- edit must never be assignable to GuestGrantablePermission
-    const illegalEdit: GuestGrantablePermission = 'edit';
-    void illegalEdit;
+    const _illegalEdit: GuestGrantablePermission = 'edit';
     const legal: GuestGrantablePermission[] = ['read', 'comment'];
     expect(legal).toEqual(['read', 'comment']);
   });
 
   it('neither share nor edit is ever grantable by link (compile-time cap)', () => {
     // @ts-expect-error -- share must never be assignable to LinkGrantablePermission
-    const illegalShare: LinkGrantablePermission = 'share';
-    void illegalShare;
+    const _illegalShare: LinkGrantablePermission = 'share';
     // @ts-expect-error -- edit must never be assignable to LinkGrantablePermission
-    const illegalEdit: LinkGrantablePermission = 'edit';
-    void illegalEdit;
+    const _illegalEdit: LinkGrantablePermission = 'edit';
     const legal: LinkGrantablePermission[] = ['read', 'comment'];
     expect(legal).toEqual(['read', 'comment']);
   });
