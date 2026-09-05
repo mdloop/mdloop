@@ -26,11 +26,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/imjasdeepk/mdloop.git"
+    "url": "git+https://github.com/mdloop/mdloop.git"
   },
-  "homepage": "https://github.com/imjasdeepk/mdloop#readme",
+  "homepage": "https://github.com/mdloop/mdloop#readme",
   "bugs": {
-    "url": "https://github.com/imjasdeepk/mdloop/issues"
+    "url": "https://github.com/mdloop/mdloop/issues"
   },
   "keywords": [
     "markdown",

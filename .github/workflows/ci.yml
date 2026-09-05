@@ -126,17 +126,26 @@ jobs:
   secret-scan:
     # Secret scanning: catch a real key landing in a
     # commit before it can be pushed further/merged. No Postgres, no pnpm
-    # install — gitleaks ships its own binary via the action. Runs in
-    # parallel with verify/e2e (no `needs:`), same as those two jobs are
-    # parallel to each other.
+    # install. Runs in parallel with verify/e2e (no `needs:`), same as those
+    # two jobs are parallel to each other.
+    #
+    # This runs the gitleaks CLI directly rather than gitleaks/gitleaks-action:
+    # the action's v2+ wrapper refuses to run on an organization-owned repo
+    # without a paid-or-free-tier GITLEAKS_LICENSE secret from gitleaks.io,
+    # which this repo does not have (moved from a personal account into the
+    # mdloop org). The gitleaks binary itself has no such gate — only the
+    # action wrapper does — so downloading the release directly gets the same
+    # scan with no license and no external account. Version pinned exact, same
+    # convention as this repo's other exact-pinned tools (esbuild, pglite).
     runs-on: ubuntu-latest
+    env:
+      GITLEAKS_VERSION: 8.30.1
     steps:
       - uses: actions/checkout@v7
         with:
-          # gitleaks-action v2 scans whatever git history the checkout
-          # exposes, so a full clone is what makes the `push` scan a genuine
-          # full-history scan; on `pull_request` the action restricts itself
-          # to the PR diff regardless of depth.
+          # A full clone is what makes the `push` scan a genuine full-history
+          # scan; on `pull_request`, --log-opts below restricts gitleaks
+          # itself to the PR diff regardless of checkout depth.
           #
           # NOTE: this was previously an expression ending in
           # "github.event.pull_request.commits plus one", to fetch only the
@@ -150,13 +159,20 @@ jobs:
           # to read one. No job in this file had ever executed. Keep the
           # literal.
           fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Only enforced for organization-owned repos (free at gitleaks.io);
-          # a no-op for a personal-account repo. Leaving the reference in so
-          # this doesn't need touching if the repo ever moves to an org.
-          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+      - name: Install gitleaks
+        run: |
+          curl -sSfL -o gitleaks.tar.gz \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          tar -xzf gitleaks.tar.gz gitleaks
+          sudo mv gitleaks /usr/local/bin/gitleaks
+      - name: Scan (push — full history)
+        if: github.event_name == 'push'
+        run: gitleaks detect --source . --config .gitleaks.toml --redact -v
+      - name: Scan (pull_request — PR diff only)
+        if: github.event_name == 'pull_request'
+        run: |
+          gitleaks detect --source . --config .gitleaks.toml --redact -v \
+            --log-opts="origin/${{ github.base_ref }}..HEAD"
 
   constitution:
     # The direct answer to CONSTITUTION.md §8.2's per-phase gate "local

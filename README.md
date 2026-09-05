@@ -78,7 +78,7 @@ Full walkthrough (Docker, database, config, first login): [`SELF_HOSTING.md`](SE
 **Claude Code** — the plugin drives the whole publish/review/revise loop on its own, MCP included:
 
 ```sh
-claude plugin marketplace add imjasdeepk/mdloop
+claude plugin marketplace add mdloop/mdloop
 # then, inside Claude Code:
 /plugin install mdloop-sync@mdloop
 ```

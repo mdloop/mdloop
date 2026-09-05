@@ -154,3 +154,18 @@ correcting §4's wording via ADR (§8.5) to describe the proxy path instead.
 and leak some on failure; at high machine load, unrelated files start failing. Check `uptime` and
 count leftover `mdloop_test_%` databases before investigating a scattered failure as a real
 regression.
+
+**Three dependency majors are deliberately held back (`.github/dependabot.yml`'s `ignore` list).**
+Each blocks on a concrete upstream fact, not on caution alone — revisit when the fact changes, not
+on a schedule:
+
+- `@types/node` — pinned to the 22.x major to track the runtime this repo actually ships on
+  (`engines.node >=22`, CI runs node 22). Types describing a newer Node's APIs than the one running
+  is how code typechecks and then crashes.
+- `vitest` / `@vitest/coverage-v8` — held at 3.x because `@amiceli/vitest-cucumber@^7` (50
+  `*.feature.test.ts` files; CONSTITUTION's Gherkin requirement on money paths) does not yet resolve
+  its CLI bin under vitest 4 — confirmed failing in CI (`Failed to create bin at
+node_modules/.bin/vitest-cucumber`). Unignore once upstream adds vitest 4 support.
+- `typescript` — held at 5.x because `scripts/gen-docs` depends on `ts-morph@28`, which does not yet
+  support TypeScript 7, and the whole monorepo's cross-package resolution runs through `tsc
+--build`'s project-references graph. Unignore once ts-morph supports TS 7.

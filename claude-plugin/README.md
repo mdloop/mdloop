@@ -121,7 +121,7 @@ subdirectory. Add an entry like this to that marketplace's `.claude-plugin/marke
   "name": "mdloop-sync",
   "source": {
     "source": "git-subdir",
-    "url": "imjasdeepk/mdloop",
+    "url": "mdloop/mdloop",
     "path": "claude-plugin"
   },
   "description": "Keeps repo markdown specs in sync with mdloop"
