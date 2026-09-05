@@ -14,14 +14,14 @@
     "@mdloop/domain": "workspace:*",
     "@mdloop/persistence": "workspace:*",
     "@mdloop/shared": "workspace:*",
-    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "ioredis": "^6.0.0",
-    "jose": "^6.2.3",
+    "jose": "^6.2.10",
     "open": "^10.1.2",
-    "pg": "^8.22.0",
-    "zod": "^4.4.3"
+    "pg": "^8.23.0",
+    "zod": "^4.5.4"
   },
   "devDependencies": {
-    "@types/pg": "^8.20.0"
+    "@types/pg": "^8.23.1"
   }
 }
