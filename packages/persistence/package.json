@@ -22,27 +22,27 @@
   },
   "sideEffects": false,
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.1102.0",
-    "@aws-sdk/cloudfront-signer": "^3.1098.0",
+    "@aws-sdk/client-s3": "^3.1124.0",
+    "@aws-sdk/cloudfront-signer": "^3.1116.0",
     "@mdloop/app": "workspace:*",
     "@mdloop/domain": "workspace:*",
     "@mdloop/shared": "workspace:*",
-    "@electric-sql/pglite": "0.5.5",
-    "@electric-sql/pglite-socket": "0.2.8",
+    "@electric-sql/pglite": "0.5.8",
+    "@electric-sql/pglite-socket": "0.2.11",
     "@opentelemetry/api": "^1.9.1",
-    "@opentelemetry/exporter-metrics-otlp-http": "^0.220.0",
-    "@opentelemetry/exporter-trace-otlp-http": "^0.220.0",
-    "@opentelemetry/resources": "^2.9.0",
-    "@opentelemetry/sdk-metrics": "^2.9.0",
-    "@opentelemetry/sdk-node": "^0.220.0",
-    "@opentelemetry/sdk-trace-node": "^2.9.0",
+    "@opentelemetry/exporter-metrics-otlp-http": "^0.222.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.222.0",
+    "@opentelemetry/resources": "^2.11.0",
+    "@opentelemetry/sdk-metrics": "^2.11.0",
+    "@opentelemetry/sdk-node": "^0.222.0",
+    "@opentelemetry/sdk-trace-node": "^2.11.0",
     "@opentelemetry/semantic-conventions": "^1.43.0",
     "ioredis": "^6.0.0",
-    "pg": "^8.22.0",
-    "zod": "^4.4.3"
+    "pg": "^8.23.0",
+    "zod": "^4.5.4"
   },
   "devDependencies": {
-    "@types/pg": "^8.20.0",
+    "@types/pg": "^8.23.1",
     "esbuild": "0.28.2"
   }
 }
