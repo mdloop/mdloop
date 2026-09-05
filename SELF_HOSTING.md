@@ -11,7 +11,7 @@ npx mdloop open ./my-project
 Building from source instead (for development, or to run a version ahead of what's published):
 
 ```sh
-git clone https://github.com/imjasdeepk/mdloop
+git clone https://github.com/mdloop/mdloop
 cd mdloop
 pnpm install
 pnpm build                # builds the CLI (tsc) AND the web SPA (vite) — `open` serves both

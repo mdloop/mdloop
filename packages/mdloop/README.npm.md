@@ -37,9 +37,9 @@ detached, so it survives closing the terminal.
 
 This package is the zero-install local experience. Running mdloop for a team, against a real
 Postgres, with SSO, S3-compatible storage, or a Docker deployment is documented in the source
-repository, not this package — see [SELF_HOSTING.md](https://github.com/imjasdeepk/mdloop/blob/main/SELF_HOSTING.md).
+repository, not this package — see [SELF_HOSTING.md](https://github.com/mdloop/mdloop/blob/main/SELF_HOSTING.md).
 
 ## License
 
 Apache-2.0. Source, issue tracker, and full documentation:
-[github.com/imjasdeepk/mdloop](https://github.com/imjasdeepk/mdloop).
+[github.com/mdloop/mdloop](https://github.com/mdloop/mdloop).

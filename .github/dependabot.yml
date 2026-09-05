@@ -8,13 +8,48 @@ updates:
     schedule:
       interval: weekly
     groups:
-      # Bump workspace dependencies together rather than opening a separate
-      # PR per package — most updates here are low-risk minor/patch bumps and
-      # reviewing them as one batch is cheaper than reviewing N near-identical
-      # PRs. Security updates still open on their own, ungrouped.
+      # Bump patch/minor workspace dependencies together rather than opening
+      # a separate PR per package — those are low-risk and reviewing them as
+      # one batch is cheaper than reviewing N near-identical PRs. `update-types`
+      # keeps majors OUT of this group: without it, a group with `patterns: ['*']`
+      # and no type filter pulls in whatever major happens to be available that
+      # week and fuses it into the same PR as every routine patch bump — every
+      # dependency in the group then reports as a major, `dependabot-auto-merge.yml`
+      # correctly refuses to touch it, and the PR sits unreviewable (43 packages,
+      # several majors, arrived fused this way once — see git history/PR #9).
+      # Security updates still open on their own, ungrouped, regardless of type.
       workspace-dependencies:
+        applies-to: version-updates
         patterns:
           - '*'
+        update-types:
+          - minor
+          - patch
+    # Majors excluded from the group above still open — one PR each, so they
+    # can actually be reviewed — except the ones listed here, which stay on
+    # their current major deliberately. See docs/RISKS.md for the standing
+    # reason behind each entry; revisit on the linked upstream event, not on
+    # a schedule.
+    ignore:
+      # types/runtime version must track the pinned `engines.node` (>=22, and
+      # CI runs node 22), not lead it — types describing APIs node 22 doesn't
+      # have is how code typechecks and then crashes at runtime.
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
+      # @amiceli/vitest-cucumber@^7 (50 feature-test files, CONSTITUTION's
+      # Gherkin requirement on money paths) doesn't yet resolve its CLI bin
+      # under vitest 4 — confirmed failing in CI. Unignore once upstream adds
+      # vitest 4 support.
+      - dependency-name: 'vitest'
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@vitest/coverage-v8'
+        update-types: ['version-update:semver-major']
+      # ts-morph@28 (scripts/gen-docs) doesn't support TypeScript 7 yet, and
+      # the whole monorepo's cross-package resolution runs through `tsc
+      # --build`'s project-references graph — too central to move ahead of
+      # its own tooling. Unignore once ts-morph supports TS 7.
+      - dependency-name: 'typescript'
+        update-types: ['version-update:semver-major']
     open-pull-requests-limit: 10
 
   # Keep the CI workflow's own actions (checkout, setup-node, codeql-action,
