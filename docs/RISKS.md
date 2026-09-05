@@ -155,9 +155,9 @@ and leak some on failure; at high machine load, unrelated files start failing. C
 count leftover `mdloop_test_%` databases before investigating a scattered failure as a real
 regression.
 
-**Three dependency majors are deliberately held back (`.github/dependabot.yml`'s `ignore` list).**
-Each blocks on a concrete upstream fact, not on caution alone — revisit when the fact changes, not
-on a schedule:
+**Four dependencies are deliberately held back (`.github/dependabot.yml`'s `ignore` list).** Each
+blocks on a concrete upstream fact, not on caution alone — revisit when the fact changes, not on a
+schedule:
 
 - `@types/node` — pinned to the 22.x major to track the runtime this repo actually ships on
   (`engines.node >=22`, CI runs node 22). Types describing a newer Node's APIs than the one running
@@ -169,3 +169,14 @@ node_modules/.bin/vitest-cucumber`). Unignore once upstream adds vitest 4 suppor
 - `typescript` — held at 5.x because `scripts/gen-docs` depends on `ts-morph@28`, which does not yet
   support TypeScript 7, and the whole monorepo's cross-package resolution runs through `tsc
 --build`'s project-references graph. Unignore once ts-morph supports TS 7.
+- `@electric-sql/pglite` / `@electric-sql/pglite-socket` — held at `0.5.5`/`0.2.8` (all updates
+  ignored, not just majors) after a routine patch/minor Dependabot bump to `0.5.8`/`0.2.11` made
+  `mdloop open`'s SIGINT shutdown exit non-zero roughly half the time. Only reproduced through the
+  real packed-tarball smoke test (`pnpm verify:release`'s `smoke:package` step, which installs the
+  actual npm tarball fresh and sends a real SIGINT) — `pnpm test` never touches this path, and a
+  quick manual repro against the monorepo's own `dist/` (pnpm-resolved deps) didn't reproduce it
+  either, only the standalone `npm install` did. Consistent with this pair's known history (the
+  npm-beta-release effort found a version-drift crash here that was likewise invisible under pnpm
+  and only real under `npm install`) — treat any future bump to either package as needing several
+  `verify:release` runs, not one, before trusting it, and the two must keep moving together either
+  way.
