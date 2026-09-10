@@ -16,8 +16,8 @@ importers:
   .:
     devDependencies:
       '@amiceli/vitest-cucumber':
-        specifier: ^7.0.0
-        version: 7.0.0(vitest@3.2.7(@types/debug@4.1.13)(@types/node@22.20.1)(jsdom@30.0.1)(lightningcss@1.33.0)(yaml@2.9.0))
+        specifier: ^8.0.0
+        version: 8.0.0(vitest@3.2.7(@types/debug@4.1.13)(@types/node@22.20.1)(jsdom@30.0.1)(lightningcss@1.33.0)(yaml@2.9.0))
       '@eslint/js':
         specifier: ^9.39.5
         version: 9.39.5
@@ -451,11 +451,11 @@ importers:
 
 packages:
 
-  '@amiceli/vitest-cucumber@7.0.0':
-    resolution: {integrity: sha512-RjadvOolQ/g0uu4ntoZ4iBaTHy2NBxllxcco/apY1o42C5Y8g5OqCTstzmiX0PGa2izb/DskAwocBzsuRtLmLg==}
+  '@amiceli/vitest-cucumber@8.0.0':
+    resolution: {integrity: sha512-d0e2xMft008GQrEAoFoarnfMdSZLXg3VyNdnV7K+9vctFvk5iIqplsycio2daR7+yz6EGvFvC1l6RsWie8le7Q==}
     hasBin: true
     peerDependencies:
-      vitest: ^4.0.4
+      vitest: ^5.0.0
 
   '@ampproject/remapping@2.3.0':
     resolution: {integrity: sha512-30iZtAPgz+LTIYoeivqYo853f02jBYSd5uGnGpkFV0M3xOt9aN73erkgYAmZU43x4VfqcnLxW9Kpg3R5LC4YYw==}
@@ -4201,7 +4201,7 @@ packages:
 
 snapshots:
 
-  '@amiceli/vitest-cucumber@7.0.0(vitest@3.2.7(@types/debug@4.1.13)(@types/node@22.20.1)(jsdom@30.0.1)(lightningcss@1.33.0)(yaml@2.9.0))':
+  '@amiceli/vitest-cucumber@8.0.0(vitest@3.2.7(@types/debug@4.1.13)(@types/node@22.20.1)(jsdom@30.0.1)(lightningcss@1.33.0)(yaml@2.9.0))':
     dependencies:
       callsites: 4.2.0
       minimist: 1.2.8

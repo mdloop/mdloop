@@ -32,7 +32,7 @@
     "rename": "node scripts/dev/rename.mjs"
   },
   "devDependencies": {
-    "@amiceli/vitest-cucumber": "^7.0.0",
+    "@amiceli/vitest-cucumber": "^8.0.0",
     "@eslint/js": "^9.39.5",
     "@mdloop/api": "workspace:*",
     "@mdloop/app": "workspace:*",
