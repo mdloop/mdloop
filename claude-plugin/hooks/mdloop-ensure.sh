@@ -12,11 +12,15 @@
 # nothing), and must not be repurposed into "go create one". Here, no
 # manifest is exactly the case this script exists to fix.
 #
-# The MCP-registration step (g) at the bottom is local-only, on purpose: a
-# remote/team endpoint's MCP URL is not derivable from anything on disk
-# (`.mdloop/manifest.json`'s endpoint is the API base used for pushes, and
-# SELF_HOSTING.md is explicit that MCP is a second, separate process that
-# can sit on a different host/port entirely) — see that step's own comment.
+# The MCP-registration step (g) at the bottom is a fallback, not the primary path: the plugin
+# now ships its own `.mcp.json` (claude-plugin/.mcp.json), so a fresh install is already covered
+# whenever `MDLOOP_API_KEY` is exported in the environment — that file's `${MDLOOP_API_KEY:-}`
+# resolves with no hook involvement at all. What `.mcp.json` cannot do is read a *per-repo*
+# `.mdloop/credentials` file, since it has no repo to be per- anything about; step (g) exists for
+# exactly that case (and remains local-only, on purpose: a remote/team endpoint's MCP URL is not
+# derivable from anything on disk — `.mdloop/manifest.json`'s endpoint is the API base used for
+# pushes, and SELF_HOSTING.md is explicit that MCP is a second, separate process that can sit on a
+# different host/port entirely) — see that step's own comment.
 #
 # Exit codes, same contract as `mdloop-sync.sh` documents in full: 0 is a
 # true no-op or a success, 1 is a non-blocking error surfaced as a hook-error
@@ -95,12 +99,13 @@ if [ ! -f "$MANIFEST" ]; then
   }
 fi
 
-# (g) Register this instance with Claude Code's own MCP client — closes the
-# gap where installing the plugin alone never made get_feedback_bundle and
-# friends reachable: nothing before this line ever told Claude Code an MCP
-# server exists at all, so the `mdloop-review` skill's tools were simply
-# absent until a human ran `claude mcp add` by hand. Local only — see the
-# file header for why a remote endpoint can't be derived safely here.
+# (g) Register this instance with Claude Code's own MCP client — the fallback for the one gap
+# `claude-plugin/.mcp.json` cannot close on its own: a per-repo `.mdloop/credentials` file, which
+# `.mcp.json`'s `${MDLOOP_API_KEY:-}` has no way to read (it has no repo to be per- anything
+# about). Nothing before this line ever told Claude Code about that case, so without this the
+# `mdloop-review` skill's tools would simply be absent whenever the API key lives in
+# `.mdloop/credentials` rather than the environment — until a human ran `claude mcp add` by hand.
+# Local only — see the file header for why a remote endpoint can't be derived safely here.
 #
 # Steady-state must cost nothing: the admin key this reads is durable
 # (never rotates — see credentials.ts), so once `claude mcp add` has
@@ -108,8 +113,9 @@ fi
 # valid on every later session with no hook involvement at all. This
 # existence check is what makes that true — bare `mdloop:` is a manually
 # `add`ed entry's own line in `claude mcp list` (confirmed empirically;
-# plugin-declared servers instead appear namespaced as
-# `plugin:<name>:<server>`, so there is no collision risk here).
+# plugin-declared servers, including the bundled `.mcp.json` above, instead
+# appear namespaced as `plugin:<name>:<server>`, so there is no collision
+# risk here).
 CLAUDE_BIN=$(command -v claude 2>/dev/null) || exit 0
 "$CLAUDE_BIN" mcp list 2>/dev/null | grep -q '^mdloop:' && exit 0
 

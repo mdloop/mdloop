@@ -2,6 +2,7 @@ import { createInterface } from 'node:readline/promises';
 import type { Trigger } from './mdloop-config.js';
 import { ensureMdloopConfig, readMdloopConfig } from './mdloop-config.js';
 import { ensureMdloopDir } from './mdloop-dir.js';
+import { installRepoAgentInstructions, INSTRUCTIONS_BEGIN } from './agent-instructions.js';
 import { readLocalBootstrapApiKey, resolveApiKey, writeCredentials } from './credentials.js';
 import { resolveDataDir } from './data-dir.js';
 import { EndpointRefusedError, endpointOrigin, isLocalEndpoint } from './endpoint-trust.js';
@@ -27,6 +28,12 @@ export interface LinkOptions {
   trigger?: Trigger;
   /** `false` for `mdloop link --no-git-hook`. Defaults to installing. */
   installGitHook?: boolean;
+  /**
+   * `false` for `mdloop link --no-agent-instructions`. Defaults to writing the review-loop block
+   * (steering plans/artifacts through mdloop instead of inline approval) into `CLAUDE.md` or
+   * `AGENTS.md` at the repo root — see `agent-instructions.ts`. Committed, so teammates inherit it.
+   */
+  installAgentInstructions?: boolean;
   /**
    * Reuse-or-create a project named after the folder instead of prompting
    * (`--project` always wins regardless of this — see the check below).
@@ -225,6 +232,9 @@ export async function runLink(
     if (options.installGitHook !== false) {
       await reportGitHookInstall(options.folder, resolvedTrigger, io);
     }
+    if (options.installAgentInstructions !== false) {
+      await reportAgentInstructionsInstall(options.folder, io);
+    }
     return 0;
   } finally {
     await client.close();
@@ -274,6 +284,42 @@ async function reportGitHookInstall(folder: string, trigger: Trigger, io: Io): P
             'automatically except a manual "mdloop push" or the agent pushing proactively.',
         );
       }
+      break;
+  }
+}
+
+/**
+ * Mirrors `reportGitHookInstall`: an outcome that changed something, or that the user needs to act
+ * on, says so in full; a routine no-op relink (`'unchanged'`) stays quiet.
+ */
+async function reportAgentInstructionsInstall(folder: string, io: Io): Promise<void> {
+  const { file, result } = await installRepoAgentInstructions(folder);
+  switch (result) {
+    case 'created':
+      io.println(
+        `Created ${file} with mdloop's review-loop instructions — plans and review-worthy ` +
+          'artifacts now go through mdloop for sign-off instead of being approved inline.',
+      );
+      io.println('Skip this next time with --no-agent-instructions.');
+      break;
+    case 'installed':
+      io.println(`Added mdloop's review-loop instructions to ${file}.`);
+      break;
+    case 'updated':
+      io.println(`Updated mdloop's review-loop instructions in ${file} to the latest version.`);
+      break;
+    case 'unchanged':
+      // Already correct — a routine relink should not narrate a no-op.
+      break;
+    case 'foreign':
+      io.println(
+        `${file} has a "${INSTRUCTIONS_BEGIN}" marker that looks incomplete or hand-edited — ` +
+          'left untouched. Remove the stray marker line(s) and re-run "mdloop link" to fix it.',
+      );
+      break;
+    case 'no_target_dir':
+      // The repo root itself is missing, which link's own earlier steps would already have
+      // failed on — nothing new to say here.
       break;
   }
 }

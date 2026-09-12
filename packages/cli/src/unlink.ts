@@ -1,6 +1,7 @@
 import { rm } from 'node:fs/promises';
 import { mdloopDir } from './mdloop-dir.js';
 import { uninstallGitPostCommitHook } from './git-hook.js';
+import { uninstallRepoAgentInstructions } from './agent-instructions.js';
 import type { LockInfo } from './lock.js';
 import { acquireLock, releaseLock } from './lock.js';
 import { readManifest } from './manifest.js';
@@ -10,6 +11,12 @@ export interface UnlinkOptions {
   folder: string;
   /** `false` for `mdloop unlink --no-git-hook`. Defaults to removing a mdloop-managed hook. */
   removeGitHook?: boolean;
+  /**
+   * `false` for `mdloop unlink --no-agent-instructions`. Defaults to removing the mdloop-managed
+   * block from CLAUDE.md/AGENTS.md — unlink is allowed to undo only what link did, same as the git
+   * hook, so a foreign file/span is left byte-for-byte untouched regardless.
+   */
+  removeAgentInstructions?: boolean;
 }
 
 /**
@@ -45,6 +52,9 @@ export async function runUnlink(options: UnlinkOptions, io: Io): Promise<number>
 
   try {
     if (options.removeGitHook !== false) await reportGitHookUninstall(options.folder, io);
+    if (options.removeAgentInstructions !== false) {
+      await reportAgentInstructionsUninstall(options.folder, io);
+    }
     await rm(mdloopDir(options.folder), { recursive: true, force: true });
     io.println(`Unlinked ${options.folder} (was linked to project ${manifest.projectId})`);
     return 0;
@@ -72,6 +82,23 @@ async function reportGitHookUninstall(folder: string, io: Io): Promise<void> {
     case 'not_present':
     case 'not_a_git_repo':
       // Nothing changed, nothing to report — same philosophy as link.ts.
+      break;
+  }
+}
+
+/** Mirrors `reportAgentInstructionsInstall` in `link.ts`. */
+async function reportAgentInstructionsUninstall(folder: string, io: Io): Promise<void> {
+  const { file, result } = await uninstallRepoAgentInstructions(folder);
+  switch (result) {
+    case 'removed':
+      io.println(`Removed mdloop's review-loop instructions from ${file}.`);
+      break;
+    case 'foreign':
+      io.println(`${file} has a block that was not installed by "mdloop link" — left untouched.`);
+      break;
+    case 'not_present':
+    case 'no_target_dir':
+      // Nothing changed, nothing to report — same philosophy as the git hook.
       break;
   }
 }

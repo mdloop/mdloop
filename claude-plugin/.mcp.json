@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "mdloop": {
+      "type": "http",
+      "url": "${MDLOOP_MCP_URL:-http://127.0.0.1:58744/mcp}",
+      "headers": {
+        "Authorization": "Bearer ${MDLOOP_API_KEY:-}"
+      }
+    }
+  }
+}

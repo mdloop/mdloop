@@ -7,7 +7,7 @@ identical from the outside, and most of what is not here is not here on purpose.
 Companion to `docs/RISKS.md` (what could bite) and `CONSTITUTION.md` §7 (the boundary rule that
 decides what belongs here at all).
 
-Last reviewed: 2026-09-05.
+Last reviewed: 2026-09-12.
 
 ## Shape
 
@@ -34,10 +34,26 @@ Nine packages, all core. `shared` (DTOs) → `domain` (pure logic, zero framewor
   local endpoint re-resolves the live port from `<data dir>/instance.json` rather than trusting a
   value that could go stale across a restart. The Claude Code plugin (`claude-plugin/`) drives all of this on its own via a
   `SessionStart` hook (`mdloop-ensure.sh`) — installing the plugin is the opt-in, `MDLOOP_AUTO=0`
-  the opt-out. The hook also registers the running instance with Claude Code's own MCP client
-  (`claude mcp add`, `--scope local`), local endpoints only — until this, installing the plugin
-  alone never made `get_feedback_bundle` and the rest of the MCP tool set reachable at all, despite
-  `mdloop-review`'s skill assuming they were.
+  the opt-out. The plugin also bundles `.mcp.json`, declaring the mdloop MCP server up front so
+  `get_feedback_bundle` and the rest of the tool set are reachable from the plugin's first turn
+  whenever `MDLOOP_API_KEY` is exported — the hook's own MCP registration (`claude mcp add
+--scope local`, local endpoints only) is now the fallback for the one case `.mcp.json` can't
+  cover: a per-repo `.mdloop/credentials` key.
+- **`curl -fsSL .../install.sh | sh`** — a thin, POSIX-`sh` wrapper over `npm install -g mdloop`
+  (Node ≥22 required, never auto-installed) that also links the current folder and runs `mdloop
+instructions install --global`. `npm install -g mdloop` on its own still works and stays
+  published; the installer is the documented one-liner, not a replacement channel.
+- **`mdloop instructions install|status|remove [--global]`** and the review-loop block `mdloop
+link` writes into `CLAUDE.md` (if present) or `AGENTS.md` by default — "plans and review-worthy
+  artifacts go through mdloop's `upload_document`/`request_review`, never presented for approval
+  inline," naming the real tools. Repo scope is committed, so it travels via git the way
+  `.mdloop/` already does; `--global` targets every coding agent's machine-wide config it can find
+  (today: Claude Code's `~/.claude/CLAUDE.md`, always; Codex CLI's `~/.codex/AGENTS.md`, only if
+  `~/.codex/` already exists — never creating a config directory for a tool that isn't installed).
+  Marker-guarded (`packages/cli/src/agent-instructions.ts`), same non-destructive discipline as the
+  git post-commit hook in `git-hook.ts`: a file/span not carrying mdloop's marker is left
+  untouched. `--no-agent-instructions` opts a `link`/`unlink` out. This is the CLI's first write to
+  a file the repo owns rather than one it owns itself (`.mdloop/`) — see ADR 0018.
 - **23 Gherkin feature files** in `features/`, covering the money paths CONSTITUTION §3 requires:
   tenant isolation, quota, retention, permissions, sharing, guest sharing, rate-limit parity,
   redaction, comment search, agent publish→review.

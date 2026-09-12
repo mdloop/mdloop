@@ -5,11 +5,14 @@
 #   bash claude-plugin/scripts/check-skill-drift.sh
 #
 # Both skills in this bundle name mdloop MCP tools by hand — `get_feedback_bundle`,
-# `accept_suggestion`, `upload_document` and friends. Nothing links those strings
-# to the server that actually registers them, so a rename or removal in
-# `packages/mcp/src/server.ts` leaves a skill quietly instructing the agent to
-# call a tool that no longer exists. The agent then fails at the worst possible
-# moment: mid-review, in front of the human whose feedback it was fetching.
+# `accept_suggestion`, `upload_document` and friends — and so does the
+# review-loop instructions block `packages/cli/src/agent-instructions.ts`
+# writes into every linked repo's CLAUDE.md/AGENTS.md. Nothing links those
+# strings to the server that actually registers them, so a rename or removal in
+# `packages/mcp/src/server.ts` leaves a skill (or every future linked repo)
+# quietly instructing the agent to call a tool that no longer exists. The agent
+# then fails at the worst possible moment: mid-review, in front of the human
+# whose feedback it was fetching.
 #
 # This script closes that loop. It exits non-zero, naming names, the moment a
 # skill references a tool the server no longer registers.
@@ -30,10 +33,11 @@ set -u
 BUNDLE_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 REPO_ROOT=$(cd -- "$BUNDLE_DIR/.." && pwd)
 
-# Both are overridable so the test suite can point the same logic at fixtures
-# instead of editing the real skills.
+# All three are overridable so the test suite can point the same logic at
+# fixtures instead of editing the real skills/server/template.
 SKILLS_DIR="${MDLOOP_SKILLS_DIR:-$BUNDLE_DIR/skills}"
 MCP_SERVER="${MDLOOP_MCP_SERVER:-$REPO_ROOT/packages/mcp/src/server.ts}"
+INSTRUCTIONS_FILE="${MDLOOP_INSTRUCTIONS_FILE:-$REPO_ROOT/packages/cli/src/agent-instructions.ts}"
 
 say() {
   printf 'check-skill-drift: %s\n' "$1"
@@ -134,6 +138,15 @@ referenced_tools() { # <verbs file> <skill files...>
 SKILL_FILES=$(find "$SKILLS_DIR" -name 'SKILL.md' | sort)
 [ -n "$SKILL_FILES" ] || die "no SKILL.md files under $SKILLS_DIR"
 
+# The instructions template is optional input, unlike the skills dir above:
+# a fixture run that only wants to exercise the skill-vs-server check has no
+# reason to also stand up a fake template file, so its absence is a silent
+# skip here, not a die().
+REFERENCE_FILES="$SKILL_FILES"
+if [ -f "$INSTRUCTIONS_FILE" ]; then
+  REFERENCE_FILES=$(printf '%s\n%s\n' "$SKILL_FILES" "$INSTRUCTIONS_FILE")
+fi
+
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
 
@@ -149,7 +162,7 @@ REGISTERED_COUNT=$(grep -c . <"$WORK/registered")
 tool_verbs <"$WORK/registered" >"$WORK/verbs"
 
 # shellcheck disable=SC2086
-referenced_tools "$WORK/verbs" $SKILL_FILES >"$WORK/referenced"
+referenced_tools "$WORK/verbs" $REFERENCE_FILES >"$WORK/referenced"
 REFERENCED_COUNT=$(grep -c . <"$WORK/referenced")
 
 MISSING=$(comm -23 "$WORK/referenced" "$WORK/registered")
@@ -160,7 +173,7 @@ if [ -n "$MISSING" ]; then
       "$(printf '%s\n' "$MISSING" | grep -c .)" "${MCP_SERVER#"$REPO_ROOT"/}"
     printf '%s\n' "$MISSING" | while IFS= read -r tool; do
       printf '  %s\n' "$tool"
-      grep -rn -- "\`$tool\`" $SKILL_FILES | sed 's|^|    |'
+      grep -rn -- "\`$tool\`" $REFERENCE_FILES | sed 's|^|    |'
     done
     printf '\n'
     printf 'Either the tool was renamed/removed in the MCP server (update the skill to match),\n'
@@ -169,5 +182,7 @@ if [ -n "$MISSING" ]; then
   exit 1
 fi
 
-say "OK — $REFERENCED_COUNT tool reference(s) across $(printf '%s\n' "$SKILL_FILES" | grep -c .) skill file(s), all registered ($REGISTERED_COUNT tools in ${MCP_SERVER#"$REPO_ROOT"/})"
+SCANNED="$(printf '%s\n' "$SKILL_FILES" | grep -c .) skill file(s)"
+[ -f "$INSTRUCTIONS_FILE" ] && SCANNED="$SCANNED and the agent-instructions template"
+say "OK — $REFERENCED_COUNT tool reference(s) across $SCANNED, all registered ($REGISTERED_COUNT tools in ${MCP_SERVER#"$REPO_ROOT"/})"
 exit 0

@@ -44,10 +44,22 @@ the agent reads the feedback back and revises. Repeat until it's signed off.
 
 ### Just you, on your laptop
 
-Requires Node ≥22 and npm.
+Requires Node ≥22 (the installer checks and tells you if it's missing).
 
 ```sh
-npx mdloop open ./my-project
+curl -fsSL https://raw.githubusercontent.com/mdloop/mdloop/main/install.sh | sh
+```
+
+Installs the CLI (a thin wrapper over `npm install -g mdloop`), links the current folder, and
+writes mdloop's review-loop instructions into every coding agent's config it finds on this
+machine — so plans and review-worthy artifacts get sent to mdloop for sign-off instead of approved
+inline in the transcript. Rather not pipe straight to a shell? Inspect it first:
+`curl -fsSL https://raw.githubusercontent.com/mdloop/mdloop/main/install.sh -o install.sh && less install.sh`.
+
+Then:
+
+```sh
+mdloop open .
 ```
 
 Spins up an embedded Postgres (PGlite — a real Postgres wire-protocol socket server), mints you an

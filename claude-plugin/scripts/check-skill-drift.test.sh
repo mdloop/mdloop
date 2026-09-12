@@ -7,8 +7,13 @@
 #   bash claude-plugin/scripts/check-skill-drift.test.sh
 #
 # Case 1 runs the guard against the real repo, unmodified. Every other case
-# points it at throwaway fixtures via MDLOOP_SKILLS_DIR / MDLOOP_MCP_SERVER, so
-# the real skills and the real MCP server are never edited to induce a failure.
+# points it at throwaway fixtures via MDLOOP_SKILLS_DIR / MDLOOP_MCP_SERVER /
+# MDLOOP_INSTRUCTIONS_FILE, so the real skills, MCP server, and instructions
+# template are never edited to induce a failure. Cases 2-6 pass a nonexistent
+# path for MDLOOP_INSTRUCTIONS_FILE — otherwise the guard would fall back to
+# the real, unmodified template (which references tools the fixture MCP
+# servers below deliberately don't register) and every fixture case would
+# fail on that instead of on what it's actually testing.
 set -u
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
@@ -115,7 +120,7 @@ description: fixture
 Read the feedback with `get_feedback_bundle`, then call `get_fabricated_thing`
 before uploading with `upload_document`.
 MD
-run_guard MDLOOP_SKILLS_DIR="$WORK/skills" MDLOOP_MCP_SERVER="$WORK/server.ts"
+run_guard MDLOOP_SKILLS_DIR="$WORK/skills" MDLOOP_MCP_SERVER="$WORK/server.ts" MDLOOP_INSTRUCTIONS_FILE="$WORK/no-instructions.ts"
 assert_eq 'exit 1' 1 "$STATUS"
 assert_contains 'names the missing tool' 'get_fabricated_thing' "$STDERR"
 assert_contains 'says what happened' 'not registered in' "$STDERR"
@@ -136,7 +141,7 @@ description: fixture
 
 `get_feedback_bundle` then `upload_document`.
 MD
-run_guard MDLOOP_SKILLS_DIR="$WORK/skills" MDLOOP_MCP_SERVER="$WORK/server.ts"
+run_guard MDLOOP_SKILLS_DIR="$WORK/skills" MDLOOP_MCP_SERVER="$WORK/server.ts" MDLOOP_INSTRUCTIONS_FILE="$WORK/no-instructions.ts"
 assert_eq 'exit 0' 0 "$STATUS"
 assert_contains 'counts both references' '2 tool reference(s)' "$STDOUT"
 cleanup
@@ -157,7 +162,7 @@ description: fixture
 `not_a_reviewer` or `not_a_suggestion`. Pass `document_id` and `change_note`,
 and read `proposed_text` off each item.
 MD
-run_guard MDLOOP_SKILLS_DIR="$WORK/skills" MDLOOP_MCP_SERVER="$WORK/server.ts"
+run_guard MDLOOP_SKILLS_DIR="$WORK/skills" MDLOOP_MCP_SERVER="$WORK/server.ts" MDLOOP_INSTRUCTIONS_FILE="$WORK/no-instructions.ts"
 assert_eq 'exit 0 — no error code was treated as a tool' 0 "$STATUS"
 assert_contains 'only the real tool reference counted' '1 tool reference(s)' "$STDOUT"
 cleanup
@@ -176,23 +181,68 @@ description: fixture
 
 `get_feedback_bundle`
 MD
-run_guard MDLOOP_SKILLS_DIR="$WORK/skills" MDLOOP_MCP_SERVER="$WORK/server.ts"
+run_guard MDLOOP_SKILLS_DIR="$WORK/skills" MDLOOP_MCP_SERVER="$WORK/server.ts" MDLOOP_INSTRUCTIONS_FILE="$WORK/no-instructions.ts"
 assert_eq 'exit 1' 1 "$STATUS"
 assert_contains 'says the parse found nothing' 'parsed 0 tool registrations' "$STDERR"
 cleanup
 
 # ---------------------------------------------------------------------------
-echo '6. missing inputs are reported, not ignored'
+echo '6. a stale reference in the instructions template alone → fails, naming it'
+# The template lives outside SKILLS_DIR entirely, so this exercises the
+# separate MDLOOP_INSTRUCTIONS_FILE input on its own: an empty skills fixture
+# (no drift there) plus a template naming a tool the fixture server does not
+# register.
 new_fixtures
-run_guard MDLOOP_SKILLS_DIR="$WORK/skills" MDLOOP_MCP_SERVER="$WORK/nonexistent.ts"
+fixture_skill <<'MD'
+---
+name: fixture-skill
+description: fixture
+---
+
+`get_feedback_bundle` then `upload_document`.
+MD
+cat >"$WORK/instructions.ts" <<'TS'
+// Plans go through `upload_document` then `request_review`.
+TS
+run_guard MDLOOP_SKILLS_DIR="$WORK/skills" MDLOOP_MCP_SERVER="$WORK/server.ts" \
+  MDLOOP_INSTRUCTIONS_FILE="$WORK/instructions.ts"
+assert_eq 'exit 1' 1 "$STATUS"
+assert_contains 'names the missing tool' 'request_review' "$STDERR"
+assert_contains 'points at the template file' 'instructions.ts' "$STDERR"
+cleanup
+
+# ---------------------------------------------------------------------------
+echo '7. a template naming only registered tools alongside the skills → passes'
+new_fixtures
+fixture_skill <<'MD'
+---
+name: fixture-skill
+description: fixture
+---
+
+`get_feedback_bundle` then `upload_document`.
+MD
+cat >"$WORK/instructions.ts" <<'TS'
+// Upload with `upload_document`.
+TS
+run_guard MDLOOP_SKILLS_DIR="$WORK/skills" MDLOOP_MCP_SERVER="$WORK/server.ts" \
+  MDLOOP_INSTRUCTIONS_FILE="$WORK/instructions.ts"
+assert_eq 'exit 0' 0 "$STATUS"
+assert_contains 'mentions the template in the summary' 'agent-instructions template' "$STDOUT"
+cleanup
+
+# ---------------------------------------------------------------------------
+echo '8. missing inputs are reported, not ignored'
+new_fixtures
+run_guard MDLOOP_SKILLS_DIR="$WORK/skills" MDLOOP_MCP_SERVER="$WORK/nonexistent.ts" MDLOOP_INSTRUCTIONS_FILE="$WORK/no-instructions.ts"
 assert_eq 'missing server → exit 1' 1 "$STATUS"
 assert_contains 'names the missing server' 'MCP server not found' "$STDERR"
 
-run_guard MDLOOP_SKILLS_DIR="$WORK/no-such-dir" MDLOOP_MCP_SERVER="$WORK/server.ts"
+run_guard MDLOOP_SKILLS_DIR="$WORK/no-such-dir" MDLOOP_MCP_SERVER="$WORK/server.ts" MDLOOP_INSTRUCTIONS_FILE="$WORK/no-instructions.ts"
 assert_eq 'missing skills dir → exit 1' 1 "$STATUS"
 assert_contains 'names the missing skills dir' 'skills directory not found' "$STDERR"
 
-run_guard MDLOOP_SKILLS_DIR="$WORK/skills" MDLOOP_MCP_SERVER="$WORK/server.ts"
+run_guard MDLOOP_SKILLS_DIR="$WORK/skills" MDLOOP_MCP_SERVER="$WORK/server.ts" MDLOOP_INSTRUCTIONS_FILE="$WORK/no-instructions.ts"
 assert_eq 'skills dir with no SKILL.md → exit 1' 1 "$STATUS"
 assert_contains 'says there is nothing to check' 'no SKILL.md files' "$STDERR"
 cleanup

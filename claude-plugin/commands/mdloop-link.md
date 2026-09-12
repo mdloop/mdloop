@@ -89,7 +89,19 @@ Do this:
 
 ## If `mdloop` is missing
 
-It is not published to any registry yet — today it is built from this monorepo:
+Easiest path — the published package, via the one-line installer:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/mdloop/mdloop/main/install.sh | sh
+```
+
+A thin wrapper over `npm install -g mdloop` (Node ≥22 required) that also links the current folder
+and writes mdloop's review-loop instructions into every coding agent's config it finds on this
+machine. `npm install -g mdloop` on its own also still works if you'd rather skip those two extra
+steps.
+
+Working inside this monorepo itself instead (contributing to `packages/cli`, or running ahead of
+what's published), build from source:
 
 ```bash
 pnpm install && pnpm typecheck   # tsc --build; produces packages/cli/dist/main.js
