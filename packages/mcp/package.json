@@ -16,10 +16,10 @@
     "@mdloop/shared": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "ioredis": "^6.0.0",
-    "jose": "^6.2.10",
-    "open": "^11.0.2",
+    "jose": "^6.2.12",
+    "open": "^11.0.3",
     "pg": "^8.23.0",
-    "zod": "^4.5.4"
+    "zod": "^4.6.2"
   },
   "devDependencies": {
     "@types/pg": "^8.23.1"

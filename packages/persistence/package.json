@@ -22,8 +22,8 @@
   },
   "sideEffects": false,
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.1124.0",
-    "@aws-sdk/cloudfront-signer": "^3.1116.0",
+    "@aws-sdk/client-s3": "^3.1131.0",
+    "@aws-sdk/cloudfront-signer": "^3.1125.0",
     "@mdloop/app": "workspace:*",
     "@mdloop/domain": "workspace:*",
     "@mdloop/shared": "workspace:*",
@@ -39,7 +39,7 @@
     "@opentelemetry/semantic-conventions": "^1.43.0",
     "ioredis": "^6.0.0",
     "pg": "^8.23.0",
-    "zod": "^4.5.4"
+    "zod": "^4.6.2"
   },
   "devDependencies": {
     "@types/pg": "^8.23.1",
