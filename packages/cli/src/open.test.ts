@@ -186,7 +186,9 @@ describe('runOpen', () => {
       expect(openedUrls).toEqual(['http://127.0.0.1:4100']);
       expect(linkCalls()).toBe(1);
       expect(pushCalls()).toBe(1);
-      expect(fake.state.documents.size).toBe(1); // notes.md got pushed
+      // notes.md, plus the AGENTS.md that "link" (invoked internally by "open") wrote with
+      // mdloop's review-loop instructions — walk.ts tracks every .md file, no exclusions.
+      expect(fake.state.documents.size).toBe(2);
       expect(fake.state.callCounts.create_project ?? 0).toBe(1); // auto-provisioned, no matching name
       expect(api.killed).toEqual(['SIGTERM']);
       expect(mcp.killed).toEqual(['SIGTERM']);

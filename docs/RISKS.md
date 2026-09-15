@@ -8,7 +8,7 @@ Rules for this file: every entry states the risk, why it is real rather than the
 would close it. An entry gets deleted when it is closed, not marked "done" — `git log` is the
 history. If a risk is accepted rather than closed, say so and say who benefits from the trade.
 
-Last reviewed: 2026-09-04.
+Last reviewed: 2026-09-12.
 
 ## Severe — a failure here is not recoverable by the operator
 
@@ -135,6 +135,18 @@ found after the fact.
 **MCP OAuth ships inert.** ADR 0013's protected-resource path is code-complete but does nothing
 until a deployment registers a Resource Indicator with its identity provider. The risk is a
 maintainer reading the code and believing it is exercised. API keys are the working path.
+
+**`mdloop link` now writes into a file the repo owns and commits, not just `.mdloop/`.** ADR 0018
+accepted this deliberately (see it for the full trade-off), but two concrete consequences are worth
+tracking rather than only reasoning about once: (1) a teammate who never opted into mdloop still
+sees the review-loop instructions block in `CLAUDE.md`/`AGENTS.md` the moment anyone links the repo
+and commits — a real departure from this repo's "silent unless something happened" hook
+philosophy; (2) the `CLAUDE.md`/`AGENTS.md` file that block lands in becomes, like every other
+markdown file in the repo, eligible for `mdloop push` to upload as a tracked document — `walk.ts`
+has no per-file exclusions, on purpose, so this is consistent rather than a bug, but it does mean a
+repo's own steering instructions can end up as a reviewable "document" inside mdloop itself.
+Closes with either turning out not to matter in practice, or (if it does) a `walk.ts` exclusion
+list — deliberately not added preemptively, since one does not exist for any other file today.
 
 ## Low, but worth stating
 

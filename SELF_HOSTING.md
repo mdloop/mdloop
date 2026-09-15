@@ -5,8 +5,13 @@ Two shapes, depending on what you need.
 ## One user, one project
 
 ```sh
-npx mdloop open ./my-project
+curl -fsSL https://raw.githubusercontent.com/mdloop/mdloop/main/install.sh | sh
+mdloop open ./my-project
 ```
+
+The installer wraps `npm install -g mdloop`, links the current folder, and writes mdloop's
+review-loop instructions into every coding agent's config it finds on this machine. `npx mdloop
+open ./my-project` also still works, without a global install or the instructions step.
 
 Building from source instead (for development, or to run a version ahead of what's published):
 

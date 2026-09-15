@@ -2,6 +2,7 @@ import { parseArgs } from 'node:util';
 import type { Trigger } from './mdloop-config.js';
 import { resolveDataDir } from './data-dir.js';
 import { listFolderProjects } from './folder-projects.js';
+import { runInstructions } from './instructions.js';
 import { runLink } from './link.js';
 import { runOpen } from './open.js';
 import type { Io } from './output.js';
@@ -17,8 +18,12 @@ const DEFAULT_CONCURRENCY = 3;
 export const USAGE = `mdloop sync CLI — push local markdown files to mdloop documents.
 
 Usage:
-  mdloop link [folder] [--project <id>] [--endpoint <url>] [--trigger <mode>] [--no-git-hook]
-  mdloop unlink [folder] [--no-git-hook]
+  mdloop link [folder] [--project <id>] [--endpoint <url>] [--trigger <mode>]
+              [--no-git-hook] [--no-agent-instructions]
+  mdloop unlink [folder] [--no-git-hook] [--no-agent-instructions]
+  mdloop instructions install [folder] [--global]
+  mdloop instructions status [folder] [--global]
+  mdloop instructions remove [folder] [--global]
   mdloop push [folder] [--note <text>] [--force] [--quiet] [--concurrency <n>]
   mdloop status [folder] [--concurrency <n>]
   mdloop watch [folder] [--debounce <ms>]
@@ -37,6 +42,13 @@ Link options:
   --no-git-hook     Do not install .git/hooks/post-commit. Without this, link
                     installs a post-commit hook that pushes after every commit
                     (an existing non-mdloop hook is never touched or replaced)
+  --no-agent-instructions
+                    Do not write mdloop's review-loop instructions ("route plans and
+                    review-worthy artifacts through mdloop, never approve them inline")
+                    into CLAUDE.md (if present) or AGENTS.md. Without this, link writes
+                    or refreshes a marker-delimited block in that file — committed, so
+                    teammates and their agents inherit it. An existing block not written
+                    by mdloop is always left untouched regardless of this flag.
 
   With no --project, against a local endpoint only: derives a project name from
   the folder and reuses an existing project matching it, or creates one if none
@@ -50,6 +62,21 @@ Unlink options:
   --no-git-hook     Leave an installed post-commit hook in place instead of
                     removing it. A foreign hook (not installed by "mdloop link")
                     is always left alone regardless of this flag.
+  --no-agent-instructions
+                    Leave an installed review-loop instructions block in place instead
+                    of removing it. A block not installed by mdloop is always left
+                    alone regardless of this flag.
+
+"mdloop instructions" — manage the review-loop instructions block directly, outside
+of "link"/"unlink" (which already drive the repo-scope case automatically). Same
+CLAUDE.md-else-AGENTS.md target as link. "install" writes or refreshes the block,
+"status" reports whether it's present without writing anything, "remove" deletes it
+(a foreign block is always left untouched). --global targets every coding agent's
+machine-wide config instead of this repo (today: Claude Code's ~/.claude/CLAUDE.md,
+always; Codex CLI's ~/.codex/AGENTS.md, only if ~/.codex already exists — mdloop never
+creates a config directory for a tool that doesn't appear to be installed). This is
+what "install.sh" calls once per machine so every repo is steered without per-repo
+setup.
 
 Push options:
   --note <text>   "What changed" note recorded on every version this run creates
@@ -145,6 +172,8 @@ export async function run(argv: string[], io: Io = stdio): Promise<number> {
         return await runLinkCommand(rest, io);
       case 'unlink':
         return await runUnlinkCommand(rest, io);
+      case 'instructions':
+        return await runInstructionsCommand(rest, io);
       case 'push':
         return await runPushCommand(rest, io);
       case 'status':
@@ -184,6 +213,7 @@ async function runLinkCommand(rest: string[], io: Io): Promise<number> {
       // `parseArgs` has no automatic negation, so the opt-out is its own
       // boolean flag rather than a `--git-hook` that nobody would ever pass.
       'no-git-hook': { type: 'boolean', default: false },
+      'no-agent-instructions': { type: 'boolean', default: false },
     },
   });
   const trigger = values.trigger;
@@ -196,6 +226,7 @@ async function runLinkCommand(rest: string[], io: Io): Promise<number> {
     {
       folder,
       installGitHook: !values['no-git-hook'],
+      installAgentInstructions: !values['no-agent-instructions'],
       // Auto-provision (reuse-or-create a project named after the folder)
       // only when the caller didn't name one explicitly — an explicit
       // --project always wins outright, this flag is never consulted when
@@ -217,10 +248,29 @@ async function runUnlinkCommand(rest: string[], io: Io): Promise<number> {
       // Same negation pattern as link's --no-git-hook: `parseArgs` has no
       // automatic negation, so the opt-out is its own boolean flag.
       'no-git-hook': { type: 'boolean', default: false },
+      'no-agent-instructions': { type: 'boolean', default: false },
     },
   });
   const folder = positionals[0] ?? process.cwd();
-  return runUnlink({ folder, removeGitHook: !values['no-git-hook'] }, io);
+  return runUnlink(
+    {
+      folder,
+      removeGitHook: !values['no-git-hook'],
+      removeAgentInstructions: !values['no-agent-instructions'],
+    },
+    io,
+  );
+}
+
+async function runInstructionsCommand(rest: string[], io: Io): Promise<number> {
+  const [subcommand, ...flags] = rest;
+  const { values, positionals } = parseArgs({
+    args: flags,
+    allowPositionals: true,
+    options: { global: { type: 'boolean', default: false } },
+  });
+  const folder = positionals[0] ?? process.cwd();
+  return runInstructions(subcommand, { folder, global: values.global }, io);
 }
 
 /** Shared by push and status — both take an optional folder and --concurrency. */

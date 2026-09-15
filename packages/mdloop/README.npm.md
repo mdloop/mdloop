@@ -10,13 +10,18 @@ first-class participant on both ends.
 ## Quickstart
 
 ```sh
-npx mdloop open ./my-project
+curl -fsSL https://raw.githubusercontent.com/mdloop/mdloop/main/install.sh | sh
 ```
 
-Spins up an embedded Postgres (PGlite — a real Postgres wire-protocol socket server) entirely
-inside this process, mints you an admin key, opens the app in your browser, and links the folder.
-No account, no cloud service, nothing to sign up for. `mdloop serve start` runs the same thing
-detached, so it survives closing the terminal.
+Installs the CLI, links the current folder, and writes mdloop's review-loop instructions into
+every coding agent's config it finds on this machine. Then `mdloop open .` spins up an embedded
+Postgres (PGlite — a real Postgres wire-protocol socket server) entirely inside this process,
+mints you an admin key, and opens the app in your browser. No account, no cloud service, nothing to
+sign up for.
+
+Since you're already here on npm: `npx mdloop open ./my-project` does the same thing in one step,
+for a single project, without the global install or the review-loop instructions above.
+`mdloop serve start` runs either path's server detached, so it survives closing the terminal.
 
 > This package covers the local, single-user path — `mdloop open`/`mdloop serve` only.
 

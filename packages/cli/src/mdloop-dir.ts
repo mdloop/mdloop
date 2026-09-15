@@ -29,11 +29,16 @@ export function mdloopGitignorePath(folder: string): string {
  * Creates `.mdloop/` and guarantees the nested `.gitignore` that keeps
  * `credentials` (an API key in plaintext), the lock file, and the endpoint
  * trust pin out of git. Nested rather than a root-`.gitignore` edit: scoped
- * correctly, and it never touches a file the repo owns.
+ * correctly, and merges into an existing file rather than clobbering it.
+ *
+ * `.mdloop/` itself is the only directory this CLI owns outright, so this
+ * particular write never touches a file the repo owns. That is no longer
+ * true of `mdloop link` as a whole, though — `agent-instructions.ts` writes a
+ * marker-guarded block into `CLAUDE.md`/`AGENTS.md`, a file the repo does own
+ * (see its own doc comment for how that stays non-destructive).
  *
  * Called from every writer of `.mdloop/` rather than from `link` alone, so
  * there is no ordering in which the directory exists without its ignore file.
- * Merges into an existing file instead of clobbering it.
  */
 export async function ensureMdloopDir(folder: string): Promise<void> {
   await mkdir(mdloopDir(folder), { recursive: true });
