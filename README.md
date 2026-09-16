@@ -66,6 +66,14 @@ Spins up an embedded Postgres (PGlite — a real Postgres wire-protocol socket s
 admin key, opens the app in your browser, and links the folder. `mdloop serve start` runs the same
 thing detached, so it survives closing the terminal.
 
+To uninstall, don't just `npm uninstall -g mdloop` — that leaves every linked repo's `.mdloop/`,
+its own CLAUDE.md/AGENTS.md block, and the global one behind (npm does not run any cleanup script
+on a global package uninstall). Use the matching one-liner instead:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/mdloop/mdloop/main/uninstall.sh | sh
+```
+
 <p align="center"><img src="docs/assets/review-ui.png" alt="The mdloop review UI: a markdown document with an inline comment and a suggested edit, Accept/Reject visible" width="720"></p>
 
 ### Your team or company

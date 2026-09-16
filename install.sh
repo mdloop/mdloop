@@ -32,6 +32,9 @@
 # script still exits 0, matching the "never block on a convenience" contract mdloop-ensure.sh
 # documents for its own analogous steps); non-zero only when step 1 or 2 — the actual install —
 # fails, since without those nothing else in this script can do anything.
+#
+# The reverse of this script is uninstall.sh, not a plain "npm uninstall -g mdloop" — that alone
+# leaves everything steps 3 and 4 wrote behind. See uninstall.sh's own header comment for why.
 set -eu
 
 say() {

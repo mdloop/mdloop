@@ -23,6 +23,7 @@ Usage:
   mdloop serve stop
   mdloop serve status [--json]
   mdloop projects list
+  mdloop uninstall [--purge-data]
   mdloop --help
 
 Link options:
@@ -114,6 +115,18 @@ pick different ones.
 and which project each one maps to. The visible half of auto-provisioning:
 "mdloop unlink" then "mdloop link --project <id>" is still the way to
 point a folder at a different project than what was auto-picked.
+
+"mdloop uninstall" — undoes everything "mdloop link" and "mdloop instructions
+install --global" wrote on this machine: unlinks every folder "mdloop projects
+list" knows about (same as running "mdloop unlink" in each by hand — a foreign
+git hook or instructions block is still always left untouched) and removes the
+global CLAUDE.md/AGENTS.md block. Run this BEFORE "npm uninstall -g mdloop" —
+npm does not run this automatically (it does not run preuninstall/postuninstall
+scripts for a global package uninstall at all), which is also why
+"uninstall.sh" exists as the documented one-liner that runs both in order.
+Never touches local document data (embedded Postgres, blobs) unless you pass
+--purge-data, which also refuses outright while a local server is still
+running against it — "mdloop serve stop" first.
 
 Environment:
   MDLOOP_API_KEY   API key for the linked folder (else .mdloop/credentials)

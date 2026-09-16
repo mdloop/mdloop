@@ -23,6 +23,14 @@ Since you're already here on npm: `npx mdloop open ./my-project` does the same t
 for a single project, without the global install or the review-loop instructions above.
 `mdloop serve start` runs either path's server detached, so it survives closing the terminal.
 
+To remove it again, run the matching uninstaller rather than a plain `npm uninstall -g mdloop` —
+the plain form leaves every linked repo's `.mdloop/` and instructions block behind, since npm
+runs no cleanup script on a global uninstall:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/mdloop/mdloop/main/uninstall.sh | sh
+```
+
 > This package covers the local, single-user path — `mdloop open`/`mdloop serve` only.
 
 ## What you get

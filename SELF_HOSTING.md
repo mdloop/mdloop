@@ -13,6 +13,10 @@ The installer wraps `npm install -g mdloop`, links the current folder, and write
 review-loop instructions into every coding agent's config it finds on this machine. `npx mdloop
 open ./my-project` also still works, without a global install or the instructions step.
 
+To remove it again, use `curl -fsSL https://raw.githubusercontent.com/mdloop/mdloop/main/uninstall.sh
+| sh` rather than a plain `npm uninstall -g mdloop` — the plain form leaves every linked repo's
+`.mdloop/` and instructions block behind, since npm runs no cleanup script on a global uninstall.
+
 Building from source instead (for development, or to run a version ahead of what's published):
 
 ```sh
