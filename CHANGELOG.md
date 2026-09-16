@@ -13,6 +13,17 @@ read "what changed" regardless of how you consume it.
 
 ## [Unreleased]
 
+### Added
+
+- `uninstall.sh` and `mdloop uninstall [--purge-data]` — the reverse of `install.sh`.
+  `npm uninstall -g mdloop` alone leaves every linked repo's `.mdloop/` and its own
+  CLAUDE.md/AGENTS.md block behind, plus the global one, because npm does not run any
+  preuninstall/postuninstall lifecycle script for a global package uninstall at all (confirmed
+  empirically against npm 10.9.4). `mdloop uninstall` unlinks every folder this machine ever
+  auto-linked and removes the global instructions block; `uninstall.sh` runs that and then
+  `npm uninstall -g mdloop`, in the right order. Never deletes local document data (embedded
+  Postgres, blobs) unless `--purge-data` is passed.
+
 ## [0.2.0] - 2026-09-16
 
 ### Added

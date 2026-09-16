@@ -10,6 +10,7 @@ import { stdio } from './output.js';
 import { runPush } from './push.js';
 import { runServe } from './serve.js';
 import { runStatus } from './status.js';
+import { runUninstall } from './uninstall.js';
 import { runUnlink } from './unlink.js';
 import { DEFAULT_DEBOUNCE_MS, runWatch } from './watch.js';
 
@@ -32,6 +33,7 @@ Usage:
   mdloop serve stop
   mdloop serve status [--json]
   mdloop projects list
+  mdloop uninstall [--purge-data]
   mdloop --help
 
 Link options:
@@ -124,6 +126,18 @@ and which project each one maps to. The visible half of auto-provisioning:
 "mdloop unlink" then "mdloop link --project <id>" is still the way to
 point a folder at a different project than what was auto-picked.
 
+"mdloop uninstall" — undoes everything "mdloop link" and "mdloop instructions
+install --global" wrote on this machine: unlinks every folder "mdloop projects
+list" knows about (same as running "mdloop unlink" in each by hand — a foreign
+git hook or instructions block is still always left untouched) and removes the
+global CLAUDE.md/AGENTS.md block. Run this BEFORE "npm uninstall -g mdloop" —
+npm does not run this automatically (it does not run preuninstall/postuninstall
+scripts for a global package uninstall at all), which is also why
+"uninstall.sh" exists as the documented one-liner that runs both in order.
+Never touches local document data (embedded Postgres, blobs) unless you pass
+--purge-data, which also refuses outright while a local server is still
+running against it — "mdloop serve stop" first.
+
 Environment:
   MDLOOP_API_KEY   API key for the linked folder (else .mdloop/credentials)
   MDLOOP_MCP_URL   Default MCP endpoint when linking (else http://localhost:3001/mcp)
@@ -186,6 +200,8 @@ export async function run(argv: string[], io: Io = stdio): Promise<number> {
         return await runServeCommand(rest, io);
       case 'projects':
         return await runProjectsCommand(rest, io);
+      case 'uninstall':
+        return await runUninstallCommand(rest, io);
       default:
         io.errln(`Unknown command: ${command}\n\n${USAGE}`);
         return 1;
@@ -377,4 +393,13 @@ async function runProjectsCommand(rest: string[], io: Io): Promise<number> {
     io.println(`${entry.folder}\t${entry.projectId}\t${entry.projectName}\t${entry.linkedAt}`);
   }
   return 0;
+}
+
+async function runUninstallCommand(rest: string[], io: Io): Promise<number> {
+  const { values } = parseArgs({
+    args: rest,
+    allowPositionals: false,
+    options: { 'purge-data': { type: 'boolean', default: false } },
+  });
+  return runUninstall({ purgeData: values['purge-data'] }, io);
 }

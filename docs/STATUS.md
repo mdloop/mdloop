@@ -43,6 +43,18 @@ Nine packages, all core. `shared` (DTOs) → `domain` (pure logic, zero framewor
   (Node ≥22 required, never auto-installed) that also links the current folder and runs `mdloop
 instructions install --global`. `npm install -g mdloop` on its own still works and stays
   published; the installer is the documented one-liner, not a replacement channel.
+- **`curl -fsSL .../uninstall.sh | sh`** and **`mdloop uninstall [--purge-data]`** — the reverse.
+  `npm uninstall -g mdloop` on its own does NOT undo `mdloop link`/`instructions install --global`:
+  confirmed empirically that npm runs neither `preuninstall` nor `postuninstall` for a global
+  package uninstall at all (npm 10.9.4, tested both with and without `--foreground-scripts`), so a
+  lifecycle hook in `packages/mdloop/package.json` would have been silent, untested dead code.
+  `mdloop uninstall` (`packages/cli/src/uninstall.ts`) is the real fix: it unlinks every folder
+  `folder-projects.json` (this machine's own record of every auto-linked folder, independent of
+  any running server) still knows about — same as running `mdloop unlink` in each by hand, a
+  foreign hook/block always left untouched — then removes the global instructions block.
+  `uninstall.sh` runs that, then `npm uninstall -g mdloop`, in the right order (the command has to
+  exist to be run). Never touches the local Postgres/blob data directory unless `--purge-data` is
+  passed, which itself refuses while a local server is still running against it.
 - **`mdloop instructions install|status|remove [--global]`** and the review-loop block `mdloop
 link` writes into `CLAUDE.md` (if present) or `AGENTS.md` by default — "plans and review-worthy
   artifacts go through mdloop's `upload_document`/`request_review`, never presented for approval
