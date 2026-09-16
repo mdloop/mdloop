@@ -13,6 +13,25 @@ read "what changed" regardless of how you consume it.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-16
+
+### Added
+
+- `install.sh` — `curl -fsSL https://raw.githubusercontent.com/mdloop/mdloop/main/install.sh | sh`
+  is now the one documented install one-liner: a thin, POSIX-`sh` wrapper over
+  `npm install -g mdloop` (Node ≥22 required, never auto-installed, never sudo) that also writes
+  the global agent-instructions block and links the current folder when it's safe to do so
+  non-interactively. `npm install -g mdloop` and `npx mdloop open` both still work unchanged.
+- `mdloop instructions install|status|remove [--global]` — writes (or removes) a marker-guarded
+  block into `~/.claude/CLAUDE.md` (and `~/.codex/AGENTS.md`, only if that directory already
+  exists) steering a coding agent to route plans and review-worthy artifacts through mdloop
+  instead of approving them inline. `mdloop link`/`unlink` write/remove the equivalent repo-scope
+  block by default; opt out with `--no-agent-instructions`.
+- The Claude Code plugin (`claude-plugin/`) now ships `.mcp.json`, so the mdloop MCP tools are
+  reachable from the plugin's first turn whenever `MDLOOP_API_KEY` is exported, instead of relying
+  entirely on the `mdloop-ensure.sh` hook's own `claude mcp add` step (kept as the fallback for a
+  per-repo `.mdloop/credentials` key it has no way to read).
+
 ## [0.1.0] - 2026-09-04
 
 ### Added

@@ -13,7 +13,7 @@
   <img alt="Self-hostable" src="https://img.shields.io/badge/self--hostable-yes-2456e6">
 </p>
 
-> `0.1.0` on npm covers the local, single-user path below. Team/self-hosting still means building
+> `0.2.0` on npm covers the local, single-user path below. Team/self-hosting still means building
 > from source. [`docs/STATUS.md`](docs/STATUS.md) tracks exactly what exists today and what is
 > deliberately absent.
 
