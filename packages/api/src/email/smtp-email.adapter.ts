@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import type { Transporter } from 'nodemailer';
 import type { EmailPort } from '@mdloop/app';
 
 export interface SmtpEmailAdapterConfig {
@@ -17,7 +18,7 @@ export interface SmtpEmailAdapterConfig {
    * transport from `host`/`port`/`secure`/`user`/`pass`. Never set in
    * production wiring — same shape as `S3StorageConfig.client`.
    */
-  readonly transporter?: nodemailer.Transporter;
+  readonly transporter?: Transporter;
 }
 
 /**
@@ -38,7 +39,7 @@ export interface SmtpEmailAdapterConfig {
  * root's job in a later phase.
  */
 export class SmtpEmailAdapter implements EmailPort {
-  private readonly transporter: nodemailer.Transporter;
+  private readonly transporter: Transporter;
   private readonly from: string;
 
   constructor(config: SmtpEmailAdapterConfig) {

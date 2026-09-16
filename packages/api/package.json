@@ -36,7 +36,6 @@
     "zod": "^4.6.2"
   },
   "devDependencies": {
-    "@types/nodemailer": "^6.4.19",
     "@types/pg": "^8.23.1",
     "jose": "^6.2.12"
   }
