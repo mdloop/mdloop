@@ -13,6 +13,8 @@ read "what changed" regardless of how you consume it.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-09-16
+
 ### Added
 
 - `uninstall.sh` and `mdloop uninstall [--purge-data]` — the reverse of `install.sh`.
