@@ -34,7 +34,9 @@ export class FsStorage implements StoragePort {
       // safe to treat as done; different bytes = programming error.
       const existing = await readFile(file);
       if (existing.length === content.length && existing.equals(content)) return;
-      throw new Error(`storage object exists with different content: ${describe()}`);
+      throw new Error(`storage object exists with different content: ${describe()}`, {
+        cause: e,
+      });
     }
   }
 

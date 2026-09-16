@@ -23,7 +23,9 @@ function sslConfigFromEnv(env: NodeJS.ProcessEnv): PoolConfig['ssl'] {
     ca = readFileSync(caPath, 'utf8');
   } catch (e) {
     const reason = e instanceof Error ? e.message : String(e);
-    throw new Error(`DB_SSL_CA_PATH (${JSON.stringify(caPath)}) could not be read: ${reason}`);
+    throw new Error(`DB_SSL_CA_PATH (${JSON.stringify(caPath)}) could not be read: ${reason}`, {
+      cause: e,
+    });
   }
   return { ca, rejectUnauthorized: true };
 }
