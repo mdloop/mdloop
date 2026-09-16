@@ -2,6 +2,7 @@
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Mock } from 'vitest';
 import type * as clientModule from '../api/client.js';
 import { ApiError, api } from '../api/client.js';
 import type { GrantDto, Me, OrgUserDto } from '../api/client.js';
@@ -77,13 +78,13 @@ beforeEach(() => {
 
 function renderPanel(
   opts: {
-    onClose?: ReturnType<typeof vi.fn>;
+    onClose?: Mock<() => void>;
     myPermission?: SharePermission;
     canManage?: boolean;
     me?: Me;
   } = {},
-): { onClose: ReturnType<typeof vi.fn> } {
-  const onClose = opts.onClose ?? vi.fn();
+): { onClose: Mock<() => void> } {
+  const onClose = opts.onClose ?? vi.fn<() => void>();
   render(
     <SharePanel
       documentId="d1"
