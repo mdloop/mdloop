@@ -55,6 +55,7 @@ async function loadAwsSdk(): Promise<typeof AwsSdkClientS3> {
         throw new Error(
           'MDLOOP_BLOBS_BUCKET is set but @aws-sdk/client-s3 is not installed — run ' +
             '"npm i @aws-sdk/client-s3", or unset MDLOOP_BLOBS_BUCKET to use local-disk storage.',
+          { cause: error },
         );
       }
       throw error;
