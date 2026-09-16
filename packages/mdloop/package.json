@@ -1,6 +1,6 @@
 {
   "name": "mdloop",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Human-in-the-loop review for agent-written markdown. Self-hostable, Apache-2.0.",
   "license": "Apache-2.0",
   "type": "module",
