@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import type { SendMailOptions, Transporter } from 'nodemailer';
 import { describe, expect, it } from 'vitest';
 import { SmtpEmailAdapter } from './smtp-email.adapter.js';
 
@@ -17,8 +18,8 @@ function captureAdapter(): { adapter: SmtpEmailAdapter; sent: () => Buffer | und
   const transporter = nodemailer.createTransport({ streamTransport: true, buffer: true });
   let lastMessage: Buffer | undefined;
   const original = transporter.sendMail.bind(transporter);
-  transporter.sendMail = async (...args: Parameters<typeof original>) => {
-    const info = await original(...args);
+  transporter.sendMail = async (data: SendMailOptions) => {
+    const info = await original(data);
     lastMessage = info.message as Buffer;
     return info;
   };
@@ -33,8 +34,8 @@ function captureAdapter(): { adapter: SmtpEmailAdapter; sent: () => Buffer | und
   return { adapter, sent: () => lastMessage };
 }
 
-function internalTransporter(adapter: SmtpEmailAdapter): nodemailer.Transporter {
-  return (adapter as unknown as { transporter: nodemailer.Transporter }).transporter;
+function internalTransporter(adapter: SmtpEmailAdapter): Transporter {
+  return (adapter as unknown as { transporter: Transporter }).transporter;
 }
 
 describe('SmtpEmailAdapter', () => {

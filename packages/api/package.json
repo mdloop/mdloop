@@ -30,13 +30,12 @@
     "@workos-inc/node": "^10.13.0",
     "fastify": "^5.12.4",
     "ioredis": "^6.0.0",
-    "nodemailer": "^9.1.1",
+    "nodemailer": "^10.0.9",
     "openid-client": "^6.8.8",
     "pg": "^8.23.0",
     "zod": "^4.6.2"
   },
   "devDependencies": {
-    "@types/nodemailer": "^6.4.19",
     "@types/pg": "^8.23.1",
     "jose": "^6.2.12"
   }
