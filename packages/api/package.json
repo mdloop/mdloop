@@ -33,7 +33,7 @@
     "nodemailer": "^10.0.9",
     "openid-client": "^6.8.8",
     "pg": "^8.23.0",
-    "zod": "^4.6.2"
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@types/pg": "^8.23.1",
