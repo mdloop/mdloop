@@ -12,8 +12,8 @@
   "dependencies": {
     "@mdloop/app": "workspace:*",
     "@mdloop/persistence": "workspace:*",
-    "pg": "^8.23.0",
-    "zod": "^4.6.2"
+    "pg": "^8.23.1",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@types/pg": "^8.23.1"
