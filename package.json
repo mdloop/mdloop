@@ -38,7 +38,7 @@
     "@mdloop/app": "workspace:*",
     "@mdloop/mcp": "workspace:*",
     "@mdloop/persistence": "workspace:*",
-    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@modelcontextprotocol/sdk": "^1.31.0",
     "@playwright/test": "^1.63.0",
     "@types/node": "^22.15.0",
     "@vitest/coverage-v8": "^3.2.7",
